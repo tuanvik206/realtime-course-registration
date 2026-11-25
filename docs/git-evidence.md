@@ -42,4 +42,6 @@ Kiểm tra nhánh và lịch sử remote trước khi push. Nếu repository Git
 
 Commit đầu tiên `1c938b206de974d779e9c7e8834227ce17f55bea` (`feat: complete realtime course registration`) đã được push thành công lên `main` của repository GitHub. Commit này là snapshot tổng hợp cho source hiện tại, không đại diện cho lịch sử từng tuần; các commit tiếp theo cần ghi nhận từng phần việc ở thời điểm thực.
 
+GitHub Actions đã pass trên cả [commit triển khai](https://github.com/tuanvik206/realtime-course-registration/actions/runs/45543211018) và [commit tài liệu](https://github.com/tuanvik206/realtime-course-registration/actions/runs/45543418658).
+
 Sandbox cho phép ghi Git index/object nhưng không cho cập nhật `.git/config`, nên remote `origin` chưa được lưu trong checkout. Push lần đầu dùng URL trực tiếp. Nếu vẫn gặp giới hạn này ở các tuần sau, dùng `git push https://github.com/tuanvik206/realtime-course-registration.git main`; trong checkout ghi được config, có thể lưu remote bằng `git remote add origin https://github.com/tuanvik206/realtime-course-registration.git` rồi dùng `git push`.

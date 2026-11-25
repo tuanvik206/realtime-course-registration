@@ -17,6 +17,7 @@
 | Restore và Release build isolated source copy | Đã chạy thành công; ghi output chi tiết tại `docs/progress.md` |
 | Compose configuration | Pass: `docker compose --env-file .env.example -f docker-compose.yml config --quiet` |
 | EF migration snapshots | Pass: `dotnet ef migrations has-pending-model-changes` cho Capacity, Identity và Audit; không có model change chưa tạo migration |
+| GitHub Actions | Pass trên commit `1c938b2` và `64b9595`; .NET restore/build/test và Compose config/image build đều thành công |
 | Compose build/up, health checks, REST/gRPC/RabbitMQ/SignalR end-to-end | Chưa chạy: Docker Engine không truy cập được trong môi trường hiện tại |
 | Hai trình duyệt realtime, outage/recovery, load đo p95 | Chưa chạy; không có số đo được xác nhận |
 
