@@ -28,7 +28,7 @@ docker compose ps
 
 Truy cập giao diện tại `http://localhost:3000`. RabbitMQ management được publish riêng trên `http://localhost:15672`; username/password nằm trong `.env`. PostgreSQL và AMQP không publish cổng ra host. Không commit hoặc gửi `.env`.
 
-Script tạo secrets ngẫu nhiên và không ghi đè `.env` đã có. Lần đầu chạy, service tự apply migrations và seed dữ liệu demo khi `DEMO_SEED_ENABLED=true`. Username demo là `admin`, `student1`, `student2`, `student3`; mật khẩu dùng `DEMO_ADMIN_PASSWORD` hoặc `DEMO_STUDENT_PASSWORD` trong `.env`.
+Script tạo secrets ngẫu nhiên và không ghi đè `.env` đã có. Lần đầu chạy, service tự apply migrations và seed dữ liệu demo khi `DEMO_SEED_ENABLED=true`. Username demo là `admin`, `student1`, `student2`, `student3`, `student4`; mật khẩu dùng `DEMO_ADMIN_PASSWORD` hoặc `DEMO_STUDENT_PASSWORD` trong `.env`.
 
 Muốn dừng nhưng giữ dữ liệu:
 

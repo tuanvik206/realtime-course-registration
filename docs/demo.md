@@ -4,7 +4,7 @@
 
 1. Tạo `.env` bằng `powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1`.
 2. Chạy `docker compose up --build -d`, chờ các health check đạt trạng thái healthy.
-3. Mở `http://localhost:3000` và đăng nhập bằng `student1` hoặc `admin`; mật khẩu đọc trong `.env` cục bộ.
+3. Mở `http://localhost:3000` và đăng nhập bằng `student1`–`student4` hoặc `admin`; mật khẩu đọc trong `.env` cục bộ.
 
 ## Luồng sinh viên
 

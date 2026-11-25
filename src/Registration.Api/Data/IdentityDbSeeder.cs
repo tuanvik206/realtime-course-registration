@@ -25,6 +25,8 @@ public sealed class IdentityDbSeeder(IdentityDbContext dbContext, IPasswordHashe
             DemoDataIds.StudentUser2Id, DemoDataIds.Student2Id, studentPassword, cancellationToken);
         await EnsureUserAsync("student3", "DEMO-003", "Sinh viên Demo 3", UserRole.Student,
             DemoDataIds.StudentUser3Id, DemoDataIds.Student3Id, studentPassword, cancellationToken);
+        await EnsureUserAsync("student4", "DEMO-004", "Sinh viên Demo 4", UserRole.Student,
+            DemoDataIds.StudentUser4Id, DemoDataIds.Student4Id, studentPassword, cancellationToken);
 
         await dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
