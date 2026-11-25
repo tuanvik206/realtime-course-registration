@@ -35,7 +35,7 @@ Danh sách/chi tiết lớp; đăng ký/hủy; chống đăng ký trùng và qu�
 
 ### P1 — hoàn thiện
 
-JWT với role Student/Admin; dashboard, lịch học, lịch sử; chức năng quản trị lớp/môn; idempotency ledger, transactional Outbox, versioning, retries, health/readiness; test suite, CI và UX responsive.
+JWT với role Student/Admin; dashboard, lịch học, lịch sử; chức năng quản trị lớp/môn; idempotency ledger, transactional Outbox, versioning, retries, health/readiness; UX responsive và setup tái lập.
 
 ### P2 — ngoài phạm vi nếu chưa được yêu cầu
 
