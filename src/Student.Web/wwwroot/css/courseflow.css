@@ -42,7 +42,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .icon-button { width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: #b7c5d8; font-size: 18px; cursor: pointer; }
 .icon-button:hover { background: #203b63; color: white; }
 .main-content { width: calc(100% - 252px); min-height: 100vh; margin-left: 252px; }
-.page-content { max-width: 1320px; margin: 0 auto; padding: 44px 48px 60px; }
+.page-content { width: 100%; max-width: 1600px; margin: 0 auto; padding: 44px clamp(24px, 3vw, 48px) 60px; }
 .mobile-header { display: none; }
 .page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin: 0 0 28px; }
 .page-heading h1 { margin: 7px 0 6px; color: #17263d; font-size: clamp(28px, 3vw, 36px); font-weight: 740; letter-spacing: -.045em; }

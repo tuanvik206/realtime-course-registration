@@ -22,10 +22,20 @@ else if (_summary is not null)
         <article class="stat-card"><span class="stat-icon green">◈</span><span class="stat-label">Tổng số tín chỉ</span><strong>@_summary.TotalCredits</strong><small>Tính trên toàn bộ đăng ký</small></article>
         <article class="stat-card"><span class="stat-icon amber">◷</span><span class="stat-label">Trạng thái dữ liệu</span><strong class="stat-word">Đã cập nhật</strong><small>Số liệu lấy từ hệ thống</small></article>
     </section>
-    <section class="content-panel dashboard-cta">
-        <div><span class="eyebrow">KẾ HOẠCH HỌC TẬP</span><h2>Lịch học của bạn luôn trong tầm tay</h2><p class="muted">Mở thời khóa biểu để xem ngày học, khung giờ và phòng học của từng lớp.</p></div>
-        <a class="button button-secondary" href="/schedule">Xem thời khóa biểu →</a>
-    </section>
+    @if (_summary.TotalActiveRegistrations == 0)
+    {
+        <section class="content-panel dashboard-cta dashboard-empty">
+            <div><span class="eyebrow">BẮT ĐẦU HỌC TẬP</span><h2>Bạn chưa đăng ký học phần nào</h2><p class="muted">Chọn một lớp còn chỗ để học phần, tín chỉ và lịch học xuất hiện ở đây.</p></div>
+            <a class="button button-primary" href="/courses">Xem danh sách lớp →</a>
+        </section>
+    }
+    else
+    {
+        <section class="content-panel dashboard-cta">
+            <div><span class="eyebrow">KẾ HOẠCH HỌC TẬP</span><h2>Lịch học của bạn luôn trong tầm tay</h2><p class="muted">Mở thời khóa biểu để xem ngày học, khung giờ và phòng học của từng lớp.</p></div>
+            <a class="button button-secondary" href="/schedule">Xem thời khóa biểu →</a>
+        </section>
+    }
 }
 
 @code {
