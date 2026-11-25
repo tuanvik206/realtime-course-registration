@@ -6,41 +6,41 @@ Nguồn yêu cầu: [`MASTER_PLAN_AI_COURSE_REGISTRATION.md`](../MASTER_PLAN_AI_
 
 ## Trạng thái tổng quan
 
-Các trạng thái DONE bên dưới nghĩa là phần mã/cấu hình của task đã được hiện thực. Chạy Compose và nghiệm thu đầu-cuối vẫn cần Docker Engine hoạt động.
+Các trạng thái DONE bên dưới nghĩa là phần mã/cấu hình của task đã được hiện thực. Commit `1c938b2` chứa một snapshot tổng hợp của toàn bộ source; đây chưa phải lịch sử commit riêng theo từng tuần. Chạy Compose và nghiệm thu đầu-cuối vẫn cần Docker Engine hoạt động.
 
 | Task | Trạng thái | Commit | Bằng chứng / blocker |
 |---|---|---|---|
-| T00 — Môi trường và repo | PARTIAL | Chưa tạo | SDK 11.0.100 build được target `net10.0`; Docker daemon không truy cập được; `.git` bị khóa ghi. Git author đã được cung cấp. |
-| T01 — Solution và project | DONE | Chưa tạo | Solution 8 project; isolated Release build pass. Author đã được cung cấp. |
-| T02 — Tài liệu, contracts, error model | DONE | Chưa tạo | Docs, protobuf, event/error contracts; unit suite hiện pass. |
-| T03 — PostgreSQL, RabbitMQ, env | PARTIAL | Chưa tạo | Compose config pass; chưa chạy container/health/persistence. |
-| T04 — EF models, migrations, seed | DONE | Chưa tạo | 3 database context, migrations, seed; thêm migration `SubjectVersion`; kiểm tra không có pending model changes. |
-| T05 — Capacity gRPC read | DONE | Chưa tạo | Danh sách/chi tiết lớp, môn, học kỳ và kiểm tra capacity. |
-| T06 — ReserveSeat transaction | DONE | Chưa tạo | Row lock, operation ledger, unique active enrollment, Outbox. |
-| T07 — ReleaseSeat và tra cứu | DONE | Chưa tạo | Hủy idempotent, ownership, summary, schedule, history. |
-| T08 — REST infrastructure/read | DONE | Chưa tạo | ProblemDetails, correlation, course/subject/semester reads, health. |
-| T09 — Login, JWT, authorization | DONE | Chưa tạo | Seed user, password hash, JWT, rate limit, Student/Admin policies. |
-| T10 — REST đăng ký/hủy | DONE | Chưa tạo | Registration API lấy student ID từ JWT, yêu cầu idempotency key. |
-| T11 — RabbitMQ topology | DONE | Chưa tạo | Durable topic exchange, queue fan-out và DLQ. |
-| T12 — Transactional Outbox relay | DONE | Chưa tạo | Publisher confirm/routability, deadline/backoff và mark-published gRPC. |
-| T13 — Notification và SignalR | DONE | Chưa tạo | Consumer và authenticated Hub; chưa xác minh runtime. |
-| T14 — Audit Worker | DONE | Chưa tạo | Dedup event ID, internal key và paginated read API. |
-| T15 — Backend end-to-end | BLOCKED | Chưa tạo | Cần PostgreSQL/RabbitMQ/Docker để chạy. |
-| T16 — Blazor shell và đăng nhập | DONE | Chưa tạo | Login, in-memory session, route guard và typed API client. |
-| T17 — Duyệt lớp, đăng ký, hủy | DONE | Chưa tạo | Tìm/lọc, chi tiết, thao tác idempotent, lịch sử/schedule. |
-| T18 — SignalR client/reconnect | DONE | Chưa tạo | WebSocket Hub protocol client, version merge, reconnect/resubscribe, polling fallback; chưa xác minh bằng 2 browser. |
-| T19 — Dashboard và lịch sinh viên | DONE | Chưa tạo | Dashboard, học phần, lịch, history, profile. |
-| T20 — Dockerfiles và Compose | PARTIAL | Chưa tạo | 5 Dockerfiles và Compose config; chưa build image hoặc `compose up`. |
-| T21 — Admin gRPC | DONE | Chưa tạo | CRUD subject/course, capacity/status, version conflict, idempotency, Outbox. |
-| T22 — Admin REST | DONE | Chưa tạo | Admin-only routes, statistics thật, pagination và student enrichment. |
-| T23 — Audit proxy và Admin UI | DONE | Chưa tạo | Internal Audit Worker proxy và màn admin subjects/courses/students/audit. |
-| T24 — Hardening, logging và readiness | PARTIAL | Chưa tạo | Health, timeout, role/ownership, audit key, hub access log off; chưa chạy security/outage suite. |
-| T25 — Unit/integration test suite | PARTIAL | Chưa tạo | Release build 0 warning/error; unit 16 pass; integration metadata 1 pass; PostgreSQL concurrency 1 skip vì chưa cấu hình DB. |
-| T26 — Load/concurrency | PARTIAL | Chưa tạo | Có test 100 request/10 chỗ và duplicate/retry; chưa chạy trên PostgreSQL. |
-| T27 — Failure/recovery | BLOCKED | Chưa tạo | Chưa thể dừng/khởi động service khi Docker daemon không khả dụng. |
-| T28 — CI, GitHub và setup tái lập | PARTIAL | Chưa tạo | GitHub Actions workflow được thêm; chưa chạy trên GitHub. Nhánh `main` chưa có commit, chưa có remote `origin`; `.git` không ghi được trong sandbox. |
-| T29 — Báo cáo, sơ đồ và demo | PARTIAL | Chưa tạo | README, report/demo/test plan và architecture diagram là bản nháp; chưa có ảnh/log chạy thật. |
-| T30 — Nghiệm thu và bàn giao | PARTIAL | Chưa tạo | Build/unit pass; nghiệm thu runtime và GitHub evidence còn thiếu. |
+| T00 — Môi trường và repo | PARTIAL | 1c938b2 | SDK 11.0.100 build được target `net10.0`; Docker daemon không truy cập được. Commit/push ban đầu đã hoàn tất; `.git/config` vẫn không ghi được để lưu remote. |
+| T01 — Solution và project | DONE | 1c938b2 | Solution 8 project; isolated Release build pass. Author đã được cung cấp. |
+| T02 — Tài liệu, contracts, error model | DONE | 1c938b2 | Docs, protobuf, event/error contracts; unit suite hiện pass. |
+| T03 — PostgreSQL, RabbitMQ, env | PARTIAL | 1c938b2 | Compose config pass; chưa chạy container/health/persistence. |
+| T04 — EF models, migrations, seed | DONE | 1c938b2 | 3 database context, migrations, seed; thêm migration `SubjectVersion`; kiểm tra không có pending model changes. |
+| T05 — Capacity gRPC read | DONE | 1c938b2 | Danh sách/chi tiết lớp, môn, học kỳ và kiểm tra capacity. |
+| T06 — ReserveSeat transaction | DONE | 1c938b2 | Row lock, operation ledger, unique active enrollment, Outbox. |
+| T07 — ReleaseSeat và tra cứu | DONE | 1c938b2 | Hủy idempotent, ownership, summary, schedule, history. |
+| T08 — REST infrastructure/read | DONE | 1c938b2 | ProblemDetails, correlation, course/subject/semester reads, health. |
+| T09 — Login, JWT, authorization | DONE | 1c938b2 | Seed user, password hash, JWT, rate limit, Student/Admin policies. |
+| T10 — REST đăng ký/hủy | DONE | 1c938b2 | Registration API lấy student ID từ JWT, yêu cầu idempotency key. |
+| T11 — RabbitMQ topology | DONE | 1c938b2 | Durable topic exchange, queue fan-out và DLQ. |
+| T12 — Transactional Outbox relay | DONE | 1c938b2 | Publisher confirm/routability, deadline/backoff và mark-published gRPC. |
+| T13 — Notification và SignalR | DONE | 1c938b2 | Consumer và authenticated Hub; chưa xác minh runtime. |
+| T14 — Audit Worker | DONE | 1c938b2 | Dedup event ID, internal key và paginated read API. |
+| T15 — Backend end-to-end | BLOCKED | 1c938b2 | Cần PostgreSQL/RabbitMQ/Docker để chạy. |
+| T16 — Blazor shell và đăng nhập | DONE | 1c938b2 | Login, in-memory session, route guard và typed API client. |
+| T17 — Duyệt lớp, đăng ký, hủy | DONE | 1c938b2 | Tìm/lọc, chi tiết, thao tác idempotent, lịch sử/schedule. |
+| T18 — SignalR client/reconnect | DONE | 1c938b2 | WebSocket Hub protocol client, version merge, reconnect/resubscribe, polling fallback; chưa xác minh bằng 2 browser. |
+| T19 — Dashboard và lịch sinh viên | DONE | 1c938b2 | Dashboard, học phần, lịch, history, profile. |
+| T20 — Dockerfiles và Compose | PARTIAL | 1c938b2 | 5 Dockerfiles và Compose config; chưa build image hoặc `compose up`. |
+| T21 — Admin gRPC | DONE | 1c938b2 | CRUD subject/course, capacity/status, version conflict, idempotency, Outbox. |
+| T22 — Admin REST | DONE | 1c938b2 | Admin-only routes, statistics thật, pagination và student enrichment. |
+| T23 — Audit proxy và Admin UI | DONE | 1c938b2 | Internal Audit Worker proxy và màn admin subjects/courses/students/audit. |
+| T24 — Hardening, logging và readiness | PARTIAL | 1c938b2 | Health, timeout, role/ownership, audit key, hub access log off; chưa chạy security/outage suite. |
+| T25 — Unit/integration test suite | PARTIAL | 1c938b2 | Release build 0 warning/error; unit 16 pass; integration metadata 1 pass; PostgreSQL concurrency 1 skip vì chưa cấu hình DB. |
+| T26 — Load/concurrency | PARTIAL | 1c938b2 | Có test 100 request/10 chỗ và duplicate/retry; chưa chạy trên PostgreSQL. |
+| T27 — Failure/recovery | BLOCKED | 1c938b2 | Chưa thể dừng/khởi động service khi Docker daemon không khả dụng. |
+| T28 — CI, GitHub và setup tái lập | PARTIAL | 1c938b2 | Commit đã push lên `main`; GitHub Actions chưa được xác minh. `.git/config` không ghi được nên remote chưa lưu cục bộ; push vừa rồi dùng URL trực tiếp. |
+| T29 — Báo cáo, sơ đồ và demo | PARTIAL | 1c938b2 | README, report/demo/test plan và architecture diagram là bản nháp; chưa có ảnh/log chạy thật. |
+| T30 — Nghiệm thu và bàn giao | PARTIAL | 1c938b2 | Build/unit pass; source có commit GitHub; nghiệm thu runtime còn thiếu do Docker Engine không khả dụng. |
 
 ## T00 — Kiểm tra môi trường và repo
 
@@ -84,7 +84,7 @@ Các phiên bản sau được kiểm tra từ trang dự án/registry chính th
 
 `Get-Location`; `dotnet --info`; `dotnet --list-sdks`; `dotnet new list`; `git --version`; `git status --short --branch`; `git remote -v`; `docker version`; `docker info --format '{{.OSType}}'`; `docker compose version`; `docker context ls`; `Get-Service com.docker.service`; `Start-Service com.docker.service` (bị từ chối quyền); kiểm tra listener cổng `3000,15672`; kiểm tra host/disk bằng WMI và .NET DriveInfo.
 
-**Còn thiếu ở T00:** SDK10 chưa cài, Docker Linux engine không khả dụng, RAM/dung lượng đĩa không đọc được. Đã xác nhận có thể phát triển/build target `net10.0` bằng SDK11; Docker chặn kiểm thử cần container. Không vượt qua PowerShell execution policy `Restricted` để cài SDK bằng script. `.git` hiện tại có thể đọc nhưng không ghi được trong sandbox; Git author đã được người dùng cung cấp là `Tuấn <tuanvik206@gmail.com>`. Các lệnh commit/push không được thực hiện để tránh tạo bằng chứng không thật; cần chạy trong môi trường có quyền ghi Git metadata.
+**Còn thiếu ở T00:** SDK10 chưa cài, Docker Linux engine không khả dụng, RAM/dung lượng đĩa không đọc được. Đã xác nhận có thể phát triển/build target `net10.0` bằng SDK11; Docker chặn kiểm thử cần container. Không vượt qua PowerShell execution policy `Restricted` để cài SDK bằng script. Git author do người dùng cung cấp là `Tuấn <tuanvik206@gmail.com>`. Sau kiểm tra ban đầu, đã tạo và push commit `1c938b2`; `.git/config` vẫn bị khóa ghi nên remote `origin` không lưu trong checkout.
 
 **Commit đề xuất:** `docs: record environment checks and blockers`.
 

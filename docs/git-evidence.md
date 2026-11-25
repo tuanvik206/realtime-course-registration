@@ -40,4 +40,6 @@ Kiểm tra nhánh và lịch sử remote trước khi push. Nếu repository Git
 
 ## Trạng thái checkout hiện tại
 
-Workspace hiện ở nhánh `main` nhưng chưa có commit và chưa cấu hình remote `origin`; các file dự án đang hiện là untracked. Git metadata (`.git`) chỉ đọc trong sandbox nên không thể stage, commit hoặc push từ phiên này. Chưa có URL commit hay CI run nào được tạo. Khi chuyển thay đổi sang checkout có quyền ghi Git, hãy tạo commit đầu tiên cho trạng thái hiện tại, sau đó tiếp tục commit/push riêng theo từng tuần thực tế.
+Commit đầu tiên `1c938b206de974d779e9c7e8834227ce17f55bea` (`feat: complete realtime course registration`) đã được push thành công lên `main` của repository GitHub. Commit này là snapshot tổng hợp cho source hiện tại, không đại diện cho lịch sử từng tuần; các commit tiếp theo cần ghi nhận từng phần việc ở thời điểm thực.
+
+Sandbox cho phép ghi Git index/object nhưng không cho cập nhật `.git/config`, nên remote `origin` chưa được lưu trong checkout. Push lần đầu dùng URL trực tiếp. Nếu vẫn gặp giới hạn này ở các tuần sau, dùng `git push https://github.com/tuanvik206/realtime-course-registration.git main`; trong checkout ghi được config, có thể lưu remote bằng `git remote add origin https://github.com/tuanvik206/realtime-course-registration.git` rồi dùng `git push`.
