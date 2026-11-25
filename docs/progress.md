@@ -35,10 +35,10 @@ Các trạng thái DONE bên dưới nghĩa là phần mã/cấu hình của tas
 | T22 — Admin REST | DONE | 1c938b2 | Admin-only routes, statistics thật, pagination và student enrichment. |
 | T23 — Audit proxy và Admin UI | DONE | 1c938b2 | Internal Audit Worker proxy và màn admin subjects/courses/students/audit. |
 | T24 — Hardening, logging và readiness | PARTIAL | 1c938b2 | Health, timeout, role/ownership, audit key, hub access log off; chưa chạy security/outage suite. |
-| T25 — Unit/integration test suite | PARTIAL | 1c938b2 | Release build 0 warning/error; unit 16 pass; integration metadata 1 pass; PostgreSQL concurrency 1 skip vì chưa cấu hình DB. |
-| T26 — Load/concurrency | PARTIAL | 1c938b2 | Có test 100 request/10 chỗ và duplicate/retry; chưa chạy trên PostgreSQL. |
+| T25 — Unit/integration test suite | PARTIAL | 59a39ee | CI pass: 16 unit tests, integration PostgreSQL metadata và concurrency đều pass; các integration khác (HTTP/gRPC/RabbitMQ/SignalR) vẫn chưa có. |
+| T26 — Load/concurrency | PARTIAL | 59a39ee | CI xác nhận DB-level 100 request/10 chỗ, retry cùng key và request trùng; HTTP end-to-end, admin-vs-enrollment và p95 chưa đo. |
 | T27 — Failure/recovery | BLOCKED | 1c938b2 | Chưa thể dừng/khởi động service khi Docker daemon không khả dụng. |
-| T28 — CI, GitHub và setup tái lập | PARTIAL | 1c938b2 | Commit đã push lên `main`; GitHub Actions pass cho commit `1c938b2` và `64b9595` (build/test .NET, Compose config/image build). `.git/config` không ghi được nên push dùng URL trực tiếp. |
+| T28 — CI, GitHub và setup tái lập | PARTIAL | 59a39ee | GitHub Actions pass gồm PostgreSQL concurrency test, Compose config và image build. [Run CI](https://github.com/tuanvik206/realtime-course-registration/actions/runs/45560049139). `.git/config` không ghi được nên push dùng URL trực tiếp. |
 | T29 — Báo cáo, sơ đồ và demo | PARTIAL | 1c938b2 | README, report/demo/test plan và architecture diagram là bản nháp; chưa có ảnh/log chạy thật. |
 | T30 — Nghiệm thu và bàn giao | PARTIAL | 1c938b2 | Build/unit pass; source có commit GitHub và CI pass; nghiệm thu runtime còn thiếu do Docker Engine không khả dụng. |
 
