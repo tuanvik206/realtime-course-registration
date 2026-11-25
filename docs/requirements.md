@@ -2,7 +2,7 @@
 
 ## Nguồn
 
-Yêu cầu môn học được tổng hợp trong `MASTER_PLAN_AI_COURSE_REGISTRATION.md`, từ hướng dẫn chung và đề bài hệ thống đăng ký học phần thời gian thực. Các lựa chọn PostgreSQL, Blazor, JWT, quản trị, Outbox, idempotency, CI và mục tiêu hiệu năng là phương án thiết kế của dự án; nếu khác đề bài chính thức thì đề bài chính thức được ưu tiên.
+Yêu cầu cốt lõi được tổng hợp từ đề bài hệ thống đăng ký học phần thời gian thực. Các lựa chọn PostgreSQL, Blazor, JWT, quản trị và Outbox là phương án triển khai của dự án; nếu khác đề bài chính thức thì đề bài chính thức được ưu tiên.
 
 ## Ma trận truy vết
 
@@ -12,7 +12,7 @@ Yêu cầu môn học được tổng hợp trong `MASTER_PLAN_AI_COURSE_REGISTR
 | R02 | Web client | Student.Web | Demo UI hoạt động |
 | R03 | Danh sách lớp, sức chứa và chi tiết lớp | REST → gRPC → capacity_db | GET `/courses`, GET `/courses/{id}` |
 | R04 | Đăng ký và hủy đăng ký | REST → gRPC | POST `/registrations`, DELETE `/registrations/{id}` |
-| R05 | Không đăng ký trùng hoặc vượt sức chứa | CourseCapacity.Service, PostgreSQL | Constraint và kiểm thử cạnh tranh |
+| R05 | Không đăng ký trùng hoặc vượt sức chứa | CourseCapacity.Service, PostgreSQL | Transaction, row lock và unique constraint |
 | R06 | Kiểm tra/giữ/trả chỗ qua gRPC | Shared.Contracts, CourseCapacity.Service | gRPC contract và lời gọi thực tế |
 | R07 | Phát sự kiện đăng ký/hủy qua RabbitMQ | Outbox publisher | Confirm, routing key, event ID |
 | R08 | Fan-out độc lập tới Notification và Audit | RabbitMQ | Hai queue riêng cùng nhận event |

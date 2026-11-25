@@ -14,7 +14,7 @@ Hệ thống web đăng ký học phần thời gian thực, xây dựng bằng 
 ## Yêu cầu chạy
 
 - Docker Desktop với Linux containers và Docker Compose v2.
-- .NET 10 SDK để build/test ngoài Docker. `global.json` cho phép SDK major mới hơn làm fallback.
+- .NET 10 SDK để build ngoài Docker. `global.json` cho phép SDK major mới hơn làm fallback.
 - PowerShell 7 hoặc Windows PowerShell.
 
 ## Chạy local bằng Docker Compose
@@ -44,20 +44,18 @@ docker compose up -d
 
 Không dùng `docker compose down -v` nếu muốn giữ dữ liệu demo.
 
-## Build và kiểm thử
+## Build
 
-```powershell
+Ngoài Docker, dùng các lệnh sau để restore và build Release:
+
 dotnet restore RealtimeCourseRegistration.slnx
-dotnet build RealtimeCourseRegistration.slnx -c Release
-dotnet test RealtimeCourseRegistration.slnx -c Release
-```
 
-Unit tests không cần Docker. PostgreSQL concurrency integration test cần database riêng và biến `CAPACITY_TEST_CONNECTION`; khi không có biến này, test được đánh dấu skipped. CI hiện chưa cấp test database PostgreSQL nên integration test concurrency sẽ skipped cho đến khi cấu hình service database riêng.
+dotnet build RealtimeCourseRegistration.slnx -c Release
 
 ## Đường dẫn API
 
 Browser gọi `http://localhost:3000/api/...`; Nginx bỏ prefix `/api` trước khi chuyển sang Registration.Api. SignalR dùng `/hubs/courses`. REST nội bộ của Registration.Api không có `/api`, ví dụ `/courses`, `/registrations` và `/admin/courses`.
 
-REST và gRPC contracts: [docs/api-specification.md](docs/api-specification.md). Kiến trúc: [docs/architecture.md](docs/architecture.md). Lệnh demo: [docs/demo.md](docs/demo.md). Ma trận kiểm thử: [docs/test-plan.md](docs/test-plan.md). Tiến độ và giới hạn môi trường: [docs/progress.md](docs/progress.md).
+REST và gRPC contracts: [docs/api-specification.md](docs/api-specification.md). Kiến trúc: [docs/architecture.md](docs/architecture.md). Lệnh demo: [docs/demo.md](docs/demo.md). Tiến độ và giới hạn môi trường: [docs/progress.md](docs/progress.md).
 
 Quy trình lưu commit Git làm bằng chứng theo tuần: [docs/git-evidence.md](docs/git-evidence.md).

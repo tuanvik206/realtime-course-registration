@@ -7,8 +7,4 @@
     <Project Path="src/Shared.Contracts/Shared.Contracts.csproj" />
     <Project Path="src/Student.Web/Student.Web.csproj" />
   </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/IntegrationTests/IntegrationTests.csproj" />
-    <Project Path="tests/UnitTests/UnitTests.csproj" />
-  </Folder>
 </Solution>

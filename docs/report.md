@@ -14,15 +14,15 @@ Sơ đồ, luồng đăng ký và ranh giới dữ liệu nằm tại [architect
 - gRPC đọc lớp/sinh viên, giữ/trả chỗ và các mutation quản trị lớp.
 - PostgreSQL models/migrations/seed, RabbitMQ fan-out, Outbox relay, SignalR Hub, Audit Worker.
 - Giao diện sinh viên và admin responsive; các màn admin gọi API thật.
-- Dockerfiles, Compose, health endpoints và GitHub Actions workflow.
+- Dockerfiles, Compose và health endpoints.
 
 ## Kết quả kiểm thử
 
-Release build pass với 0 warning/0 error; 16 unit tests pass. GitHub Actions run 45560049139 pass với PostgreSQL metadata/concurrency integration, Compose config và image build. Compose runtime, hai trình duyệt, failure injection, audit end-to-end và p95 chưa xác minh vì Docker Engine local không khả dụng. Xem [test-plan.md](test-plan.md) và [progress.md](progress.md).
+Trước khi gỡ test files theo yêu cầu, Release build pass với 0 warning/0 error và 16 unit tests pass. GitHub Actions run 45560049139 pass với PostgreSQL metadata/concurrency integration, Compose config và image build. Bản hiện tại đã bỏ test source và CI workflow; Release build sau cleanup tiếp tục pass với 0 warning/0 error. Compose runtime, hai trình duyệt, failure injection, audit end-to-end và p95 chưa xác minh vì Docker Engine local không khả dụng. Xem [progress.md](progress.md) để biết trạng thái hiện tại.
 
 ## Giới hạn đã biết
 
-- Chưa chạy được container stack và PostgreSQL concurrency test trên máy này.
+- Container stack chưa chạy được trên máy này. PostgreSQL concurrency đã được kiểm tra bằng GitHub Actions trước khi người dùng yêu cầu xóa test files.
 - Chưa đo latency hoặc tải; không tuyên bố đạt mục tiêu p95.
 - Token giữ trong bộ nhớ trình duyệt, nên refresh trang yêu cầu đăng nhập lại.
 - Mật khẩu demo là cấu hình local; cần thay đổi trước khi dùng ngoài demo.
@@ -30,4 +30,4 @@ Release build pass với 0 warning/0 error; 16 unit tests pass. GitHub Actions r
 
 ## Bằng chứng cần bổ sung khi nghiệm thu
 
-Ảnh chụp ứng dụng đang chạy, health state, hai browser realtime, RabbitMQ queues, audit record, concurrency output, recovery log và `git log` thật. Không thay thế các bằng chứng này bằng ảnh hoặc số liệu dựng sẵn.
+Ảnh chụp ứng dụng đang chạy, health state, hai browser realtime, RabbitMQ queues, audit record, recovery log và `git log` thật. Không thay thế các bằng chứng này bằng ảnh hoặc số liệu dựng sẵn.

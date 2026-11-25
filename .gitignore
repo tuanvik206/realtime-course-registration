@@ -1,6 +1,5 @@
 **/bin/
 **/obj/
-**/TestResults/
 .vs/
 .vscode/
 .idea/
@@ -15,7 +14,6 @@
 *.pfx
 *.snupkg
 artifacts/
-coverage/
 node_modules/
 Thumbs.db
 Desktop.ini

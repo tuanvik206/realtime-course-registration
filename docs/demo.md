@@ -26,7 +26,6 @@
 - `docker compose ps` và health state.
 - Danh sách lớp trên hai trình duyệt trước/sau một thao tác đăng ký hoặc hủy.
 - Giao diện admin, RabbitMQ queue fan-out và bản ghi audit cùng event ID.
-- Output `dotnet test`, concurrency test khi PostgreSQL test database khả dụng.
 - `git log --oneline` sau mỗi mốc commit thật.
 
 Không tạo ảnh, số đo tải, log hay kết quả runtime giả. Ghi lại timestamp, phiên bản image và kết quả thực tế khi chạy demo.
