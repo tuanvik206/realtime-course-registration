@@ -3,6 +3,7 @@
 @inject ApiClient Api
 @inject ClientSessionStore Auth
 @inject NavigationManager Navigation
+@inject Microsoft.JSInterop.IJSRuntime JS
 
 <PageTitle>Đăng nhập · CourseFlow</PageTitle>
 <div class="login-layout">
@@ -28,20 +29,24 @@
                 <DataAnnotationsValidator />
                 <div class="form-field">
                     <label for="username">Tên đăng nhập</label>
-                    <InputText id="username" class="form-control" @bind-Value="_model.Username" autocomplete="username" placeholder="Ví dụ: student1" />
+                    <InputText id="username" name="username" class="form-control" @bind-Value="_model.Username" autocomplete="username" placeholder="Ví dụ: student1" />
                     <ValidationMessage For="() => _model.Username" />
                 </div>
                 <div class="form-field">
                     <label for="password">Mật khẩu</label>
-                    <InputText id="password" class="form-control" type="password" @bind-Value="_model.Password" autocomplete="current-password" placeholder="Nhập mật khẩu" />
+                    <InputText id="password" name="password" class="form-control" type="password" @bind-Value="_model.Password" autocomplete="current-password" placeholder="Nhập mật khẩu" />
                     <ValidationMessage For="() => _model.Password" />
+                </div>
+                <div class="remember-row">
+                    <InputCheckbox id="remember-account" class="remember-checkbox" @bind-Value="_rememberAccount" />
+                    <label for="remember-account">Ghi nhớ tài khoản</label>
                 </div>
                 <button class="button button-primary button-wide" type="submit" disabled="@_busy">
                     @(_busy ? "Đang đăng nhập..." : "Đăng nhập")
                     @if (!_busy) { <span aria-hidden="true">→</span> }
                 </button>
             </EditForm>
-            <p class="login-help">Tài khoản demo được tạo bởi cấu hình môi trường của dự án.</p>
+            <p class="login-help">Tài khoản demo được tạo bởi cấu hình môi trường của dự án. Trình duyệt có thể đề xuất lưu mật khẩu sau khi đăng nhập.</p>
         </div>
     </section>
 </div>
@@ -54,6 +59,27 @@
     private string? _error;
     private bool _busy;
 
+    private bool _rememberAccount;
+
+    private const string RememberedUsernameKey = "courseflow.remembered-username";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var rememberedUsername = await JS.InvokeAsync<string?>("courseFlowStorage.getItem", RememberedUsernameKey);
+            if (!string.IsNullOrWhiteSpace(rememberedUsername))
+            {
+                _model.Username = rememberedUsername;
+                _rememberAccount = true;
+            }
+        }
+        catch (Microsoft.JSInterop.JSException)
+        {
+            // Keep login available when browser storage is disabled.
+        }
+    }
+
     private async Task SubmitAsync()
     {
         _busy = true;
@@ -61,6 +87,7 @@
         try
         {
             var result = await Api.LoginAsync(_model.Username.Trim(), _model.Password);
+            await SaveRememberedAccountAsync(_model.Username.Trim());
             Auth.SignIn(new ClientSession(result.AccessToken, result.ExpiresAt, result.Role, result.StudentId, result.DisplayName));
             var destination = IsLocalReturnUrl(ReturnUrl)
                 ? ReturnUrl!
@@ -80,6 +107,21 @@
         finally
         {
             _busy = false;
+        }
+    }
+
+    private async Task SaveRememberedAccountAsync(string username)
+    {
+        try
+        {
+            if (_rememberAccount)
+                await JS.InvokeVoidAsync("courseFlowStorage.setItem", RememberedUsernameKey, username);
+            else
+                await JS.InvokeVoidAsync("courseFlowStorage.removeItem", RememberedUsernameKey);
+        }
+        catch (Microsoft.JSInterop.JSException)
+        {
+            // Login still succeeds when browser storage is disabled.
         }
     }
 
