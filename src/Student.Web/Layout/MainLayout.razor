@@ -1,0 +1,51 @@
+@inherits LayoutComponentBase
+@inject ClientSessionStore Auth
+@inject NavigationManager Navigation
+
+<div class="app-shell">
+    @if (Auth.IsAuthenticated && Auth.Session is not null)
+    {
+        <aside class="sidebar">
+            <a class="brand" href="/dashboard"><span class="brand-mark">CR</span><span>Course<span class="brand-light">Flow</span><small>Đăng ký học phần</small></span></a>
+            <NavMenu />
+            <div class="sidebar-profile">
+                <div class="avatar">@Initials(Auth.Session.DisplayName)</div>
+                <div class="profile-copy"><strong>@Auth.Session.DisplayName</strong><small>@Auth.Session.Role</small></div>
+                <button class="icon-button" title="Đăng xuất" @onclick="SignOut">↗</button>
+            </div>
+        </aside>
+    }
+    <main class="main-content">
+        <header class="mobile-header">
+            <a class="brand compact" href="/dashboard"><span class="brand-mark">CR</span> CourseFlow</a>
+            @if (Auth.IsAuthenticated)
+            {
+                <button class="button button-quiet" @onclick="SignOut">Đăng xuất</button>
+                @if (Auth.Session?.Role == "Admin")
+                {
+                    <nav class="mobile-nav"><a href="/admin">Tổng quan</a><a href="/admin/courses">Lớp học phần</a><a href="/admin/students">Sinh viên</a><a href="/admin/audit-logs">Audit log</a><a href="/profile">Hồ sơ</a></nav>
+                }
+                else
+                {
+                    <nav class="mobile-nav"><a href="/dashboard">Tổng quan</a><a href="/courses">Lớp học</a><a href="/my-registrations">Đã đăng ký</a><a href="/schedule">Thời khóa biểu</a><a href="/profile">Hồ sơ</a></nav>
+                }
+            }
+        </header>
+        <article class="page-content">@Body</article>
+    </main>
+</div>
+
+@code {
+    private void SignOut()
+    {
+        Auth.SignOut();
+        Navigation.NavigateTo("/login", forceLoad: false);
+    }
+
+    private static string Initials(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "SV";
+        var parts = value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return string.Concat(parts.TakeLast(2).Select(part => char.ToUpperInvariant(part[0])));
+    }
+}

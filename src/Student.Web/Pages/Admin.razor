@@ -1,0 +1,50 @@
+@page "/admin"
+@page "/admin/dashboard"
+@attribute [UiAuthorize("Admin")]
+@inject ApiClient Api
+
+<PageTitle>Quản trị · CourseFlow</PageTitle>
+<div class="page-heading"><div><span class="eyebrow">KHU VỰC QUẢN TRỊ</span><h1>Tổng quan hệ thống</h1><p class="muted">Số liệu hiện hành từ hồ sơ sinh viên và dịch vụ sức chứa.</p></div></div>
+<nav class="admin-nav" aria-label="Quản trị">
+    <a href="/admin/subjects">Môn học</a><a href="/admin/courses">Lớp học phần</a>
+    <a href="/admin/students">Sinh viên</a><a href="/admin/audit-logs">Audit log</a>
+</nav>
+@if (_loading)
+{
+    <div class="loading">Đang tải thống kê...</div>
+}
+else if (_error is not null)
+{
+    <div class="notice notice-error">@_error <button class="text-button" @onclick="LoadAsync">Thử lại</button></div>
+}
+else if (_stats is not null)
+{
+    <section class="stat-grid">
+        <article class="stat-card"><span class="stat-label">Sinh viên</span><strong>@_stats.TotalStudents</strong><small>Hồ sơ đang lưu</small></article>
+        <article class="stat-card"><span class="stat-label">Lớp học phần</span><strong>@_stats.TotalCourses</strong><small>Trong danh mục</small></article>
+        <article class="stat-card"><span class="stat-label">Lượt đăng ký hiệu lực</span><strong>@_stats.ActiveRegistrations</strong><small>Từ capacity service</small></article>
+        <article class="stat-card"><span class="stat-label">Lớp đã đầy</span><strong>@_stats.FullCourses</strong><small>Đăng ký bằng sức chứa</small></article>
+    </section>
+    <section class="content-panel dashboard-cta">
+        <div><span class="eyebrow">QUẢN LÝ DỮ LIỆU</span><h2>Điều chỉnh lớp có kiểm soát phiên bản</h2><p class="muted">Thay đổi trạng thái hoặc sức chứa sẽ kiểm tra version hiện tại và phát sự kiện cập nhật.</p></div>
+        <a class="button button-primary" href="/admin/courses">Mở quản lý lớp →</a>
+    </section>
+}
+
+@code {
+    private AdminStatisticsDto? _stats;
+    private bool _loading = true;
+    private string? _error;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try { _stats = await Api.GetAdminStatisticsAsync(); }
+        catch (ApiException exception) { _error = exception.Message; }
+        catch (HttpRequestException) { _error = "Không kết nối được dịch vụ thống kê."; }
+        finally { _loading = false; }
+    }
+}

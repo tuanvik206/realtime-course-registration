@@ -1,0 +1,334 @@
+syntax = "proto3";
+
+package capacity.v1;
+option csharp_namespace = "RealtimeCourseRegistration.Contracts.Capacity.V1";
+
+import "google/protobuf/timestamp.proto";
+
+service CourseCapacity {
+  rpc ListCourses(ListCoursesRequest) returns (CoursePage);
+  rpc GetCourse(GetCourseRequest) returns (CourseSnapshot);
+  rpc CheckCapacity(GetCourseRequest) returns (CapacityCheckResponse);
+  rpc ReserveSeat(ReserveSeatRequest) returns (MutationResult);
+  rpc ReleaseSeat(ReleaseSeatRequest) returns (MutationResult);
+  rpc GetStudentRegistrations(StudentRegistrationsRequest) returns (RegistrationPage);
+  rpc GetStudentSummary(StudentSummaryRequest) returns (StudentSummary);
+  rpc ListSubjects(ListSubjectsRequest) returns (SubjectPage);
+  rpc ListSemesters(ListSemestersRequest) returns (SemesterPage);
+  rpc CreateSubject(CreateSubjectRequest) returns (SubjectMutationResult);
+  rpc UpdateSubject(UpdateSubjectRequest) returns (SubjectMutationResult);
+  rpc CreateCourse(CreateCourseRequest) returns (CourseMutationResult);
+  rpc UpdateCourse(UpdateCourseRequest) returns (CourseMutationResult);
+  rpc UpdateCapacity(UpdateCapacityRequest) returns (MutationResult);
+  rpc UpdateStatus(UpdateStatusRequest) returns (MutationResult);
+  rpc GetCourseRegistrations(CourseRegistrationsRequest) returns (RegistrationPage);
+  rpc GetStatistics(StatisticsRequest) returns (StatisticsResponse);
+  rpc GetPendingEvents(PendingEventsRequest) returns (PendingEventsResponse);
+  rpc MarkEventPublished(MarkEventPublishedRequest) returns (MarkEventPublishedResponse);
+}
+
+enum CourseStatus {
+  COURSE_STATUS_UNSPECIFIED = 0;
+  COURSE_STATUS_OPEN = 1;
+  COURSE_STATUS_CLOSED = 2;
+}
+
+enum RegistrationState {
+  REGISTRATION_STATE_UNSPECIFIED = 0;
+  REGISTRATION_STATE_ACTIVE = 1;
+  REGISTRATION_STATE_CANCELLED = 2;
+}
+
+enum RegistrationStatusFilter {
+  REGISTRATION_STATUS_FILTER_UNSPECIFIED = 0;
+  REGISTRATION_STATUS_FILTER_ACTIVE = 1;
+  REGISTRATION_STATUS_FILTER_CANCELLED = 2;
+  REGISTRATION_STATUS_FILTER_ALL = 3;
+}
+
+enum CapacityCheckReason {
+  CAPACITY_CHECK_REASON_UNSPECIFIED = 0;
+  CAPACITY_CHECK_REASON_AVAILABLE = 1;
+  CAPACITY_CHECK_REASON_COURSE_NOT_FOUND = 2;
+  CAPACITY_CHECK_REASON_COURSE_CLOSED = 3;
+  CAPACITY_CHECK_REASON_COURSE_FULL = 4;
+}
+
+enum OperationOutcome {
+  OPERATION_OUTCOME_UNSPECIFIED = 0;
+  OPERATION_OUTCOME_SUCCEEDED = 1;
+  OPERATION_OUTCOME_ALREADY_REGISTERED = 2;
+  OPERATION_OUTCOME_COURSE_FULL = 3;
+  OPERATION_OUTCOME_COURSE_CLOSED = 4;
+  OPERATION_OUTCOME_COURSE_NOT_FOUND = 5;
+  OPERATION_OUTCOME_REGISTRATION_NOT_FOUND = 6;
+  OPERATION_OUTCOME_STUDENT_NOT_FOUND = 7;
+  OPERATION_OUTCOME_FORBIDDEN = 8;
+  OPERATION_OUTCOME_VERSION_CONFLICT = 9;
+  OPERATION_OUTCOME_IDEMPOTENCY_CONFLICT = 10;
+  OPERATION_OUTCOME_INVALID_CAPACITY = 11;
+  OPERATION_OUTCOME_VALIDATION_ERROR = 12;
+}
+
+message CourseSchedule {
+  int32 day_of_week = 1;
+  string start_time = 2;
+  string end_time = 3;
+  string room = 4;
+}
+
+message CourseSnapshot {
+  string course_section_id = 1;
+  string course_code = 2;
+  string subject_id = 3;
+  string subject_code = 4;
+  string subject_name = 5;
+  int32 credits = 6;
+  string semester_id = 7;
+  string semester_name = 8;
+  string lecturer_name = 9;
+  repeated CourseSchedule schedules = 10;
+  int32 capacity = 11;
+  int32 registered_count = 12;
+  int32 remaining_seats = 13;
+  CourseStatus status = 14;
+  int64 version = 15;
+}
+
+message ListCoursesRequest {
+  string search = 1;
+  string semester_id = 2;
+  CourseStatus status = 3;
+  int32 page = 4;
+  int32 page_size = 5;
+}
+
+message CoursePage {
+  repeated CourseSnapshot courses = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  int64 total_count = 4;
+}
+
+message GetCourseRequest {
+  string course_section_id = 1;
+}
+
+message CapacityCheckResponse {
+  CourseSnapshot snapshot = 1;
+  bool can_register = 2;
+  CapacityCheckReason reason = 3;
+}
+
+message ReserveSeatRequest {
+  string actor_id = 1;
+  string student_id = 2;
+  string course_section_id = 3;
+  string operation_id = 4;
+}
+
+message ReleaseSeatRequest {
+  string actor_id = 1;
+  string student_id = 2;
+  string registration_id = 3;
+  string operation_id = 4;
+}
+
+message MutationResult {
+  OperationOutcome outcome = 1;
+  string error_code = 2;
+  string message = 3;
+  string registration_id = 4;
+  string student_id = 5;
+  string course_section_id = 6;
+  RegistrationState registration_status = 7;
+  CourseSnapshot snapshot = 8;
+  google.protobuf.Timestamp created_at = 9;
+}
+
+message StudentRegistrationsRequest {
+  string student_id = 1;
+  RegistrationStatusFilter status = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+}
+
+message CourseRegistrationsRequest {
+  string course_section_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+message RegistrationRecord {
+  string registration_id = 1;
+  string student_id = 2;
+  string course_section_id = 3;
+  RegistrationState status = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp cancelled_at = 6;
+  CourseSnapshot course = 7;
+}
+
+message RegistrationPage {
+  repeated RegistrationRecord registrations = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  int64 total_count = 4;
+}
+
+message StudentSummaryRequest {
+  string student_id = 1;
+  string semester_id = 2;
+}
+
+message StudentSummary {
+  int32 total_active_registrations = 1;
+  int32 total_credits = 2;
+  repeated RegistrationRecord registrations = 3;
+}
+
+message SubjectSnapshot {
+  string subject_id = 1;
+  string code = 2;
+  string name = 3;
+  int32 credits = 4;
+  bool is_active = 5;
+  int64 version = 6;
+}
+
+message ListSubjectsRequest {
+  string search = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  bool include_inactive = 4;
+}
+
+message SubjectPage {
+  repeated SubjectSnapshot subjects = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+  int64 total_count = 4;
+}
+
+message CreateSubjectRequest {
+  string actor_id = 1;
+  string code = 2;
+  string name = 3;
+  int32 credits = 4;
+  string operation_id = 5;
+}
+
+message UpdateSubjectRequest {
+  string actor_id = 1;
+  string subject_id = 2;
+  string code = 3;
+  string name = 4;
+  int32 credits = 5;
+  bool is_active = 6;
+  int64 expected_version = 7;
+  string operation_id = 8;
+}
+
+message SubjectMutationResult {
+  OperationOutcome outcome = 1;
+  string error_code = 2;
+  SubjectSnapshot subject = 3;
+}
+
+message SemesterSnapshot {
+  string semester_id = 1;
+  string code = 2;
+  string name = 3;
+  string start_date = 4;
+  string end_date = 5;
+  bool is_active = 6;
+}
+
+message ListSemestersRequest {
+  bool active_only = 1;
+}
+
+message SemesterPage {
+  repeated SemesterSnapshot semesters = 1;
+}
+
+message CourseMutationInput {
+  string course_section_id = 1;
+  string course_code = 2;
+  string subject_id = 3;
+  string semester_id = 4;
+  string lecturer_name = 5;
+  int32 capacity = 6;
+  repeated CourseSchedule schedules = 7;
+}
+
+message CreateCourseRequest {
+  string actor_id = 1;
+  string operation_id = 2;
+  CourseMutationInput course = 3;
+}
+
+message UpdateCourseRequest {
+  string actor_id = 1;
+  string operation_id = 2;
+  int64 expected_version = 3;
+  CourseMutationInput course = 4;
+}
+
+message CourseMutationResult {
+  OperationOutcome outcome = 1;
+  string error_code = 2;
+  CourseSnapshot course = 3;
+}
+
+message UpdateCapacityRequest {
+  string actor_id = 1;
+  string operation_id = 2;
+  string course_section_id = 3;
+  int32 capacity = 4;
+  int64 expected_version = 5;
+}
+
+message UpdateStatusRequest {
+  string actor_id = 1;
+  string operation_id = 2;
+  string course_section_id = 3;
+  CourseStatus status = 4;
+  int64 expected_version = 5;
+}
+
+message StatisticsRequest {
+  string semester_id = 1;
+}
+
+message StatisticsResponse {
+  int64 student_count = 1;
+  int64 course_count = 2;
+  int64 active_registration_count = 3;
+  int64 full_course_count = 4;
+}
+
+message PendingEventsRequest {
+  int32 batch_size = 1;
+}
+
+message PendingEvent {
+  string event_id = 1;
+  string event_type = 2;
+  string aggregate_id = 3;
+  int64 version = 4;
+  string payload_json = 5;
+  google.protobuf.Timestamp occurred_at = 6;
+}
+
+message PendingEventsResponse {
+  repeated PendingEvent events = 1;
+}
+
+message MarkEventPublishedRequest {
+  string event_id = 1;
+}
+
+message MarkEventPublishedResponse {
+  bool marked = 1;
+}

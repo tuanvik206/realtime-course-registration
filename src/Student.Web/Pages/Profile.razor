@@ -1,0 +1,29 @@
+@page "/profile"
+@attribute [UiAuthorize("Student,Admin")]
+@inject ApiClient Api
+
+<PageTitle>Hồ sơ · CourseFlow</PageTitle>
+<div class="page-heading"><div><span class="eyebrow">TÀI KHOẢN</span><h1>Hồ sơ của tôi</h1><p class="muted">Thông tin phiên đăng nhập hiện tại.</p></div></div>
+@if (_loading) { <div class="loading">Đang tải hồ sơ...</div> }
+else if (_error is not null) { <div class="notice notice-error">@_error</div> }
+else if (_profile is not null)
+{
+    <section class="content-panel profile-card">
+        <div class="avatar profile-avatar">@Initials(_profile.DisplayName)</div>
+        <div><span class="eyebrow">HỌ TÊN HIỂN THỊ</span><h2>@_profile.DisplayName</h2></div>
+        <dl><dt>Tên đăng nhập</dt><dd>@_profile.Username</dd><dt>Vai trò</dt><dd>@_profile.Role</dd>@if (_profile.StudentId.HasValue) { <dt>Mã hồ sơ sinh viên</dt><dd>@_profile.StudentId</dd> }</dl>
+    </section>
+}
+@code {
+    private UserProfileDto? _profile;
+    private bool _loading = true;
+    private string? _error;
+    protected override async Task OnInitializedAsync()
+    {
+        try { _profile = await Api.GetProfileAsync(); }
+        catch (ApiException exception) { _error = exception.Message; }
+        catch (HttpRequestException) { _error = "Không kết nối được máy chủ."; }
+        finally { _loading = false; }
+    }
+    private static string Initials(string name) => string.Concat(name.Split(' ', StringSplitOptions.RemoveEmptyEntries).TakeLast(2).Select(item => char.ToUpperInvariant(item[0])));
+}

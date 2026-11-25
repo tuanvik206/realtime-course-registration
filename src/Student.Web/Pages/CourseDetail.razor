@@ -1,0 +1,147 @@
+@page "/courses/{Id:guid}"
+@implements IAsyncDisposable
+@attribute [UiAuthorize("Student,Admin")]
+@inject ApiClient Api
+@inject RealtimeCourseClient Realtime
+@inject ClientSessionStore Auth
+
+<PageTitle>Chi tiết lớp · CourseFlow</PageTitle>
+<a class="back-link" href="/courses">← Quay lại danh sách lớp</a>
+@if (_loading)
+{
+    <div class="loading">Đang tải thông tin lớp...</div>
+}
+else if (_error is not null)
+{
+    <div class="notice notice-error">@_error <button class="text-button" @onclick="LoadCourseAsync">Thử lại</button></div>
+}
+else if (_course is not null)
+{
+    <section class="detail-hero">
+        <span class="connection-status @(_hubState == "Connected" ? "is-connected" : "")" role="status">@ConnectionLabel</span>
+        <span class="badge @(_course.Status == "Open" ? "badge-open" : "badge-closed")">@(_course.Status == "Open" ? "Đang mở đăng ký" : "Đã đóng")</span>
+        <h1>@_course.SubjectName</h1>
+        <p class="muted">@_course.SubjectCode · @_course.CourseCode · @_course.Credits tín chỉ</p>
+        <div class="detail-seats"><strong>@_course.RemainingSeats</strong><span>chỗ còn lại trên @_course.Capacity</span></div>
+    </section>
+    <section class="content-panel detail-grid">
+        <div><span class="eyebrow">GIẢNG VIÊN</span><h2>@_course.LecturerName</h2></div>
+        <div><span class="eyebrow">LỊCH HỌC</span>
+            @foreach (var item in _course.Schedules)
+            {
+                <p>Thứ @item.DayOfWeek · @item.StartTime[..5]–@item.EndTime[..5] · Phòng @item.Room</p>
+            }
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    private CourseDto? _course;
+    private bool _loading = true;
+    private string? _error;
+    private string _hubState = "Connecting";
+    private bool _hubStarted;
+    private CancellationTokenSource? _pollCancellation;
+
+    private string ConnectionLabel => _hubState switch
+    {
+        "Connected" => "● Dữ liệu trực tiếp",
+        "Connecting" => "◌ Đang kết nối realtime",
+        "Reconnecting" => "◌ Đang kết nối lại",
+        _ => "○ Mất kết nối · dữ liệu có thể cũ"
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        Realtime.CapacityUpdated -= OnCapacityUpdated;
+        Realtime.CatalogChanged -= OnCatalogChanged;
+        Realtime.ConnectionStateChanged -= OnConnectionStateChanged;
+        Realtime.Reconnected -= OnReconnected;
+        Realtime.CapacityUpdated += OnCapacityUpdated;
+        Realtime.CatalogChanged += OnCatalogChanged;
+        Realtime.ConnectionStateChanged += OnConnectionStateChanged;
+        Realtime.Reconnected += OnReconnected;
+        _loading = true;
+        try { _course = await Api.GetCourseAsync(Id); }
+        catch (ApiException exception) { _error = exception.Message; }
+        catch (HttpRequestException) { _error = "Không kết nối được máy chủ."; }
+        finally { _loading = false; }
+        if (_hubStarted) await Realtime.SetCoursesAsync([Id]);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_hubStarted && Auth.IsAuthenticated && Auth.Session is not null && _course is not null)
+        {
+            _hubStarted = true;
+            await Realtime.StartAsync([Id], Auth.Session.AccessToken);
+        }
+    }
+
+    private void OnCapacityUpdated(CourseAvailabilityUpdate update) => _ = InvokeAsync(() =>
+    {
+        if (_course is null || _course.Id != update.CourseSectionId || update.Version <= _course.Version) return;
+        _course = _course with
+        {
+            Capacity = update.Capacity, RegisteredCount = update.RegisteredCount,
+            RemainingSeats = update.RemainingSeats, Status = update.Status, Version = update.Version
+        };
+        StateHasChanged();
+    });
+
+    private void OnCatalogChanged(Guid courseSectionId)
+    {
+        if (courseSectionId == Id) _ = InvokeAsync(LoadCourseAsync);
+    }
+
+    private void OnConnectionStateChanged(string state) => _ = InvokeAsync(() =>
+    {
+        _hubState = state;
+        if (state == "Connected")
+        {
+            _pollCancellation?.Cancel();
+            _pollCancellation = null;
+        }
+        else if (_pollCancellation is null)
+        {
+            _pollCancellation = new CancellationTokenSource();
+            _ = PollWhileOfflineAsync(_pollCancellation.Token);
+        }
+        StateHasChanged();
+    });
+
+    private async Task PollWhileOfflineAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
+                if (_hubState != "Connected" && Auth.IsAuthenticated) await InvokeAsync(LoadCourseAsync);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
+    }
+
+    private Task OnReconnected() => InvokeAsync(LoadCourseAsync);
+
+    private async Task LoadCourseAsync()
+    {
+        try { _course = await Api.GetCourseAsync(Id); }
+        catch (ApiException exception) { _error = exception.Message; }
+        catch (HttpRequestException) { _error = "Không kết nối được máy chủ."; }
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        Realtime.CapacityUpdated -= OnCapacityUpdated;
+        Realtime.CatalogChanged -= OnCatalogChanged;
+        Realtime.ConnectionStateChanged -= OnConnectionStateChanged;
+        Realtime.Reconnected -= OnReconnected;
+        _pollCancellation?.Cancel();
+        _pollCancellation?.Dispose();
+        await Realtime.DisposeAsync();
+    }
+}

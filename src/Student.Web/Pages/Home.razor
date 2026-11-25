@@ -1,0 +1,11 @@
+@page "/"
+@inject NavigationManager Navigation
+@inject ClientSessionStore Auth
+
+<PageTitle>CourseFlow</PageTitle>
+<div class="loading">Đang mở cổng đăng ký...</div>
+
+@code {
+    protected override void OnInitialized() =>
+        Navigation.NavigateTo(Auth.IsAuthenticated ? "/dashboard" : "/login", replace: true);
+}

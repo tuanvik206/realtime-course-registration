@@ -1,0 +1,23 @@
+@inject ClientSessionStore Auth
+
+<nav class="side-nav" aria-label="Điều hướng chính">
+    @if (Auth.Session?.Role == "Admin")
+    {
+        <span class="nav-caption nav-caption-spaced">QUẢN TRỊ</span>
+        <NavLink class="nav-link" href="/admin"><span class="nav-icon">▥</span>Tổng quan</NavLink>
+        <NavLink class="nav-link" href="/admin/subjects"><span class="nav-icon">◈</span>Môn học</NavLink>
+        <NavLink class="nav-link" href="/admin/courses"><span class="nav-icon">▤</span>Lớp học phần</NavLink>
+        <NavLink class="nav-link" href="/admin/students"><span class="nav-icon">♙</span>Sinh viên</NavLink>
+        <NavLink class="nav-link" href="/admin/audit-logs"><span class="nav-icon">◷</span>Audit log</NavLink>
+    }
+    else
+    {
+        <span class="nav-caption">CỔNG SINH VIÊN</span>
+        <NavLink class="nav-link" href="/dashboard"><span class="nav-icon">⌂</span>Tổng quan</NavLink>
+        <NavLink class="nav-link" href="/courses"><span class="nav-icon">▤</span>Danh sách lớp</NavLink>
+        <NavLink class="nav-link" href="/my-registrations"><span class="nav-icon">✓</span>Học phần của tôi</NavLink>
+        <NavLink class="nav-link" href="/schedule"><span class="nav-icon">▦</span>Thời khóa biểu</NavLink>
+        <NavLink class="nav-link" href="/history"><span class="nav-icon">◷</span>Lịch sử đăng ký</NavLink>
+    }
+    <NavLink class="nav-link" href="/profile"><span class="nav-icon">♙</span>Hồ sơ</NavLink>
+</nav>

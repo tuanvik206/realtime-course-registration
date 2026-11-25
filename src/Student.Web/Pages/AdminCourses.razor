@@ -1,0 +1,244 @@
+@page "/admin/courses"
+@attribute [UiAuthorize("Admin")]
+@inject ApiClient Api
+
+<PageTitle>Lớp học phần · Quản trị CourseFlow</PageTitle>
+<div class="page-heading"><div><span class="eyebrow">QUẢN TRỊ</span><h1>Lớp học phần</h1><p class="muted">Tạo lớp, cập nhật metadata, sức chứa và trạng thái đăng ký.</p></div><a class="button button-secondary" href="/admin">← Tổng quan</a></div>
+<nav class="admin-nav" aria-label="Quản trị"><a href="/admin/subjects">Môn học</a><a href="/admin/courses">Lớp học phần</a><a href="/admin/students">Sinh viên</a><a href="/admin/audit-logs">Audit log</a></nav>
+@if (!string.IsNullOrWhiteSpace(_message)) { <div class="notice @(_isError ? "notice-error" : "notice-success")" role="status">@_message</div> }
+<details class="content-panel admin-form-panel" open="@_showCreate">
+    <summary class="admin-summary">Tạo lớp học phần</summary>
+    <EditForm Model="_new" OnValidSubmit="CreateAsync">
+        <DataAnnotationsValidator />
+        <div class="admin-form-grid">
+            <div class="form-field"><label>Mã lớp</label><InputText class="form-control" @bind-Value="_new.CourseCode" maxlength="48" /></div>
+            <div class="form-field"><label>Môn học</label><InputSelect class="form-control" @bind-Value="_new.SubjectId"><option value="@Guid.Empty">Chọn môn</option>@foreach (var item in _subjects) { <option value="@item.Id">@item.Code · @item.Name</option> }</InputSelect></div>
+            <div class="form-field"><label>Học kỳ</label><InputSelect class="form-control" @bind-Value="_new.SemesterId"><option value="@Guid.Empty">Chọn học kỳ</option>@foreach (var item in _semesters) { <option value="@item.Id">@item.Name</option> }</InputSelect></div>
+            <div class="form-field"><label>Giảng viên</label><InputText class="form-control" @bind-Value="_new.LecturerName" maxlength="160" /></div>
+            <div class="form-field"><label>Sức chứa</label><InputNumber class="form-control" @bind-Value="_new.Capacity" min="1" /></div>
+        </div>
+        <div class="admin-schedule-list"><strong>Lịch học</strong>
+            @foreach (var schedule in _new.Schedules)
+            {
+                <div class="admin-schedule-row"><InputNumber class="form-control" @bind-Value="schedule.DayOfWeek" min="1" max="7" /><InputText class="form-control" @bind-Value="schedule.StartTime" placeholder="08:00" /><InputText class="form-control" @bind-Value="schedule.EndTime" placeholder="10:00" /><InputText class="form-control" @bind-Value="schedule.Room" placeholder="Phòng" /><button class="text-button" type="button" @onclick="() => RemoveSchedule(_new.Schedules, schedule)">Bỏ</button></div>
+            }
+            <button class="text-button" type="button" @onclick="() => AddSchedule(_new.Schedules)">+ Thêm buổi học</button>
+        </div>
+        <ValidationSummary />
+        <button class="button button-primary" type="submit" disabled="@_saving">@(_saving ? "Đang tạo..." : "Tạo lớp")</button>
+    </EditForm>
+</details>
+@if (_editId.HasValue)
+{
+    <section class="content-panel admin-form-panel">
+        <div class="panel-heading"><div><span class="eyebrow">CẬP NHẬT LỚP</span><h2>@_edit.CourseCode</h2><small class="muted">Version @_edit.ExpectedVersion</small></div><button class="button button-quiet" @onclick="CancelEdit">Đóng</button></div>
+        <EditForm Model="_edit" OnValidSubmit="SaveCourseAsync">
+            <DataAnnotationsValidator />
+            <div class="admin-form-grid">
+                <div class="form-field"><label>Mã lớp</label><InputText class="form-control" @bind-Value="_edit.CourseCode" /></div>
+                <div class="form-field"><label>Môn học</label><InputSelect class="form-control" @bind-Value="_edit.SubjectId">@foreach (var item in _subjects) { <option value="@item.Id">@item.Code · @item.Name</option> }</InputSelect></div>
+                <div class="form-field"><label>Học kỳ</label><InputSelect class="form-control" @bind-Value="_edit.SemesterId">@foreach (var item in _semesters) { <option value="@item.Id">@item.Name</option> }</InputSelect></div>
+                <div class="form-field"><label>Giảng viên</label><InputText class="form-control" @bind-Value="_edit.LecturerName" /></div>
+                <div class="form-field"><label>Sức chứa</label><InputNumber class="form-control" @bind-Value="_edit.Capacity" min="1" /></div>
+            </div>
+            <div class="admin-schedule-list"><strong>Lịch học</strong>
+                @foreach (var schedule in _edit.Schedules)
+                {
+                    <div class="admin-schedule-row"><InputNumber class="form-control" @bind-Value="schedule.DayOfWeek" min="1" max="7" /><InputText class="form-control" @bind-Value="schedule.StartTime" placeholder="08:00" /><InputText class="form-control" @bind-Value="schedule.EndTime" placeholder="10:00" /><InputText class="form-control" @bind-Value="schedule.Room" placeholder="Phòng" /><button class="text-button" type="button" @onclick="() => RemoveSchedule(_edit.Schedules, schedule)">Bỏ</button></div>
+                }
+                <button class="text-button" type="button" @onclick="() => AddSchedule(_edit.Schedules)">+ Thêm buổi học</button>
+            </div>
+            <ValidationSummary />
+            <button class="button button-primary" type="submit" disabled="@_saving">@(_saving ? "Đang lưu..." : "Lưu metadata")</button>
+        </EditForm>
+    </section>
+}
+<section class="content-panel table-panel">
+    <div class="panel-heading"><div><span class="eyebrow">DANH MỤC</span><h2>@_totalCount lớp học phần</h2></div><div class="toolbar-row"><input class="form-control admin-search" placeholder="Tìm mã lớp/môn..." @bind="_search" @bind:event="oninput" /><button class="button button-secondary" @onclick="LoadCoursesAsync">Tìm</button></div></div>
+    @if (_loading) { <div class="loading">Đang tải lớp học phần...</div> }
+    else if (_error is not null) { <div class="notice notice-error">@_error <button class="text-button" @onclick="LoadCoursesAsync">Thử lại</button></div> }
+    else if (_courses.Count == 0) { <div class="empty-state"><h2>Chưa có lớp phù hợp</h2></div> }
+    else
+    {
+        <div class="table-scroll"><table class="admin-table"><thead><tr><th>Lớp / Môn</th><th>Học kỳ</th><th>Chỗ</th><th>Trạng thái</th><th>Version</th><th>Thao tác</th></tr></thead><tbody>
+        @foreach (var course in _courses)
+        {
+            <tr>
+                <td><strong>@course.CourseCode</strong><small>@course.SubjectCode · @course.SubjectName</small></td>
+                <td>@course.SemesterName</td>
+                <td>@course.RegisteredCount / @course.Capacity</td>
+                <td>@(course.Status == "Open" ? "Đang mở" : "Đã đóng")</td><td>@course.Version</td>
+                <td class="admin-actions">
+                    <button class="text-button" @onclick="() => BeginEdit(course)">Sửa</button>
+                    <a class="text-button" href="@($"/admin/courses/{course.Id:D}/registrations")">Đăng ký</a>
+                    @if (_capacityEditId == course.Id)
+                    {
+                        <InputNumber class="form-control capacity-input" @bind-Value="_capacityValue" min="@course.RegisteredCount" />
+                        <button class="text-button" disabled="@_saving" @onclick="() => SaveCapacityAsync(course)">Lưu sức chứa</button>
+                        <button class="text-button" @onclick="() => _capacityEditId = null">Đóng</button>
+                    }
+                    else { <button class="text-button" @onclick="() => BeginCapacityEdit(course)">Sức chứa</button> }
+                    @if (_confirmStatusId == course.Id)
+                    {
+                        <button class="text-button" disabled="@_saving" @onclick="() => ToggleStatusAsync(course)">Xác nhận @(course.Status == "Open" ? "đóng" : "mở")</button>
+                        <button class="text-button" @onclick="() => _confirmStatusId = null">Hủy</button>
+                    }
+                    else { <button class="text-button" @onclick="() => _confirmStatusId = course.Id">@(course.Status == "Open" ? "Đóng lớp" : "Mở lớp")</button> }
+                </td>
+            </tr>
+        }
+        </tbody></table></div>
+        <div class="pagination"><button class="button button-secondary" disabled="@(_page <= 1)" @onclick="PreviousPage">← Trước</button><span>Trang @_page</span><button class="button button-secondary" disabled="@(_courses.Count < _pageSize)" @onclick="NextPage">Tiếp →</button></div>
+    }
+</section>
+
+@code {
+    private const int _pageSize = 25;
+    private IReadOnlyList<CourseDto> _courses = Array.Empty<CourseDto>();
+    private IReadOnlyList<SubjectDto> _subjects = Array.Empty<SubjectDto>();
+    private IReadOnlyList<SemesterDto> _semesters = Array.Empty<SemesterDto>();
+    private CourseForm _new = new();
+    private CourseForm _edit = new();
+    private Guid? _editId, _capacityEditId, _confirmStatusId;
+    private int _capacityValue, _page = 1;
+    private long _totalCount;
+    private string _search = string.Empty;
+    private string? _error, _message;
+    private bool _loading = true, _saving, _isError, _showCreate;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var subjectResult = await Api.GetSubjectsAsync();
+            _subjects = subjectResult.Items;
+            _semesters = await Api.GetSemestersAsync();
+        }
+        catch (ApiException exception) { _error = exception.Message; }
+        catch (HttpRequestException) { _error = "Không thể tải môn học hoặc học kỳ."; }
+        await LoadCoursesAsync();
+    }
+
+    private async Task LoadCoursesAsync()
+    {
+        _loading = true; _error = null;
+        try
+        {
+            var result = await Api.GetAdminCoursesAsync(_search, page: _page, pageSize: _pageSize);
+            _courses = result.Items; _totalCount = result.TotalCount;
+        }
+        catch (ApiException exception) { _error = exception.Message; }
+        catch (HttpRequestException) { _error = "Không kết nối được máy chủ."; }
+        finally { _loading = false; }
+    }
+
+    private async Task CreateAsync()
+    {
+        _saving = true; _message = null; _isError = false;
+        try
+        {
+            await Api.CreateCourseAsync(ToDto(_new, 0));
+            _message = $"Đã tạo lớp {_new.CourseCode}."; _new = new CourseForm(); _showCreate = false;
+            await LoadCoursesAsync();
+        }
+        catch (ApiException exception) { _message = exception.Message; _isError = true; }
+        catch (HttpRequestException) { _message = "Không nhận được phản hồi. Tải lại danh sách để kiểm tra."; _isError = true; }
+        finally { _saving = false; }
+    }
+
+    private void BeginEdit(CourseDto course)
+    {
+        _editId = course.Id;
+        _edit = new CourseForm
+        {
+            CourseCode = course.CourseCode, SubjectId = course.SubjectId, SemesterId = course.SemesterId,
+            LecturerName = course.LecturerName, Capacity = course.Capacity, ExpectedVersion = course.Version,
+            Schedules = course.Schedules.Select(item => new ScheduleForm
+            {
+                DayOfWeek = item.DayOfWeek, StartTime = item.StartTime[..5], EndTime = item.EndTime[..5], Room = item.Room
+            }).ToList()
+        };
+    }
+
+    private void CancelEdit() => _editId = null;
+
+    private async Task SaveCourseAsync()
+    {
+        if (_editId is null) return;
+        _saving = true; _message = null; _isError = false;
+        try
+        {
+            var result = await Api.UpdateCourseAsync(_editId.Value, ToDto(_edit, _edit.ExpectedVersion));
+            _message = $"Đã cập nhật lớp {result.CourseCode}."; _editId = null;
+            await LoadCoursesAsync();
+        }
+        catch (ApiException exception) { _message = exception.Message; _isError = true; await LoadCoursesAsync(); }
+        catch (HttpRequestException) { _message = "Không nhận được phản hồi. Tải lại danh sách để xác định kết quả."; _isError = true; }
+        finally { _saving = false; }
+    }
+
+    private void BeginCapacityEdit(CourseDto course) { _capacityEditId = course.Id; _capacityValue = course.Capacity; }
+
+    private async Task SaveCapacityAsync(CourseDto course)
+    {
+        _saving = true; _message = null; _isError = false;
+        try
+        {
+            await Api.UpdateCourseCapacityAsync(course.Id, new CapacityEditDto(_capacityValue, course.Version));
+            _message = $"Đã cập nhật sức chứa lớp {course.CourseCode}."; _capacityEditId = null;
+            await LoadCoursesAsync();
+        }
+        catch (ApiException exception) { _message = exception.Message; _isError = true; await LoadCoursesAsync(); }
+        catch (HttpRequestException) { _message = "Không nhận được phản hồi. Tải lại danh sách để xác định kết quả."; _isError = true; }
+        finally { _saving = false; }
+    }
+
+    private async Task ToggleStatusAsync(CourseDto course)
+    {
+        _saving = true; _message = null; _isError = false;
+        try
+        {
+            var status = course.Status == "Open" ? "Closed" : "Open";
+            await Api.UpdateCourseStatusAsync(course.Id, new StatusEditDto(status, course.Version));
+            _message = $"Đã { (status == "Open" ? "mở" : "đóng") } đăng ký lớp {course.CourseCode}.";
+            _confirmStatusId = null; await LoadCoursesAsync();
+        }
+        catch (ApiException exception) { _message = exception.Message; _isError = true; await LoadCoursesAsync(); }
+        catch (HttpRequestException) { _message = "Không nhận được phản hồi. Tải lại danh sách để xác định kết quả."; _isError = true; }
+        finally { _saving = false; }
+    }
+
+    private static CourseEditDto ToDto(CourseForm form, long version) => new(
+        form.CourseCode.Trim(), form.SubjectId, form.SemesterId, form.LecturerName.Trim(), form.Capacity, version,
+        form.Schedules.Select(item => new ScheduleEditDto(item.DayOfWeek, item.StartTime, item.EndTime, item.Room.Trim())).ToArray());
+
+    private static void AddSchedule(List<ScheduleForm> schedules) { if (schedules.Count < 20) schedules.Add(new ScheduleForm()); }
+    private static void RemoveSchedule(List<ScheduleForm> schedules, ScheduleForm item) { if (schedules.Count > 1) schedules.Remove(item); }
+
+    private async Task PreviousPage() { _page--; await LoadCoursesAsync(); }
+    private async Task NextPage() { _page++; await LoadCoursesAsync(); }
+
+    private sealed class CourseForm
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(48, MinimumLength = 2)]
+        public string CourseCode { get; set; } = string.Empty;
+        public Guid SubjectId { get; set; }
+        public Guid SemesterId { get; set; }
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(160, MinimumLength = 2)]
+        public string LecturerName { get; set; } = string.Empty;
+        [System.ComponentModel.DataAnnotations.Range(1, 1000)]
+        public int Capacity { get; set; } = 30;
+        public long ExpectedVersion { get; set; }
+        public List<ScheduleForm> Schedules { get; set; } = [new()];
+    }
+
+    private sealed class ScheduleForm
+    {
+        [System.ComponentModel.DataAnnotations.Range(1, 7)] public int DayOfWeek { get; set; } = 2;
+        public string StartTime { get; set; } = "08:00";
+        public string EndTime { get; set; } = "10:00";
+        [System.ComponentModel.DataAnnotations.Required] public string Room { get; set; } = string.Empty;
+    }
+}

@@ -1,0 +1,47 @@
+@page "/dashboard"
+@attribute [UiAuthorize("Student")]
+@inject ApiClient Api
+
+<PageTitle>Tổng quan · CourseFlow</PageTitle>
+<div class="page-heading">
+    <div><span class="eyebrow">TỔNG QUAN</span><h1>Chào bạn 👋</h1><p class="muted">Theo dõi nhanh các học phần trong học kỳ hiện tại.</p></div>
+    <a class="button button-primary" href="/courses">Tìm lớp học <span>→</span></a>
+</div>
+@if (_loading)
+{
+    <div class="loading">Đang tải thông tin...</div>
+}
+else if (_error is not null)
+{
+    <div class="notice notice-error">@_error <button class="text-button" @onclick="LoadAsync">Thử lại</button></div>
+}
+else if (_summary is not null)
+{
+    <section class="stat-grid">
+        <article class="stat-card"><span class="stat-icon blue">▤</span><span class="stat-label">Học phần đang học</span><strong>@_summary.TotalActiveRegistrations</strong><small>Đăng ký còn hiệu lực</small></article>
+        <article class="stat-card"><span class="stat-icon green">◈</span><span class="stat-label">Tổng số tín chỉ</span><strong>@_summary.TotalCredits</strong><small>Tính trên toàn bộ đăng ký</small></article>
+        <article class="stat-card"><span class="stat-icon amber">◷</span><span class="stat-label">Trạng thái dữ liệu</span><strong class="stat-word">Đã cập nhật</strong><small>Số liệu lấy từ hệ thống</small></article>
+    </section>
+    <section class="content-panel dashboard-cta">
+        <div><span class="eyebrow">KẾ HOẠCH HỌC TẬP</span><h2>Lịch học của bạn luôn trong tầm tay</h2><p class="muted">Mở thời khóa biểu để xem ngày học, khung giờ và phòng học của từng lớp.</p></div>
+        <a class="button button-secondary" href="/schedule">Xem thời khóa biểu →</a>
+    </section>
+}
+
+@code {
+    private StudentSummaryDto? _summary;
+    private bool _loading = true;
+    private string? _error;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try { _summary = await Api.GetSummaryAsync(); }
+        catch (ApiException exception) { _error = exception.Message; }
+        catch (HttpRequestException) { _error = "Không kết nối được máy chủ."; }
+        finally { _loading = false; }
+    }
+}

@@ -1,0 +1,54 @@
+@page "/schedule"
+@attribute [UiAuthorize("Student")]
+@inject ApiClient Api
+
+<PageTitle>Thời khóa biểu · CourseFlow</PageTitle>
+<div class="page-heading"><div><span class="eyebrow">LỊCH HỌC</span><h1>Thời khóa biểu</h1><p class="muted">Lịch được tổng hợp từ các học phần đang đăng ký.</p></div></div>
+@if (_loading)
+{
+    <div class="loading">Đang tải thời khóa biểu...</div>
+}
+else if (_error is not null)
+{
+    <div class="notice notice-error">@_error <button class="text-button" @onclick="LoadAsync">Thử lại</button></div>
+}
+else if (_entries.Count == 0)
+{
+    <div class="empty-state"><span>▦</span><h2>Chưa có lịch học</h2><p>Đăng ký lớp học phần để xem lịch tại đây.</p><a class="button button-primary" href="/courses">Duyệt danh sách lớp</a></div>
+}
+else
+{
+    <div class="schedule-list">
+        @foreach (var day in _entries.GroupBy(item => item.DayOfWeek).OrderBy(group => group.Key))
+        {
+            <section class="schedule-day">
+                <div class="day-label"><span>THỨ</span><strong>@day.Key</strong></div>
+                <div class="day-events">
+                    @foreach (var item in day.OrderBy(value => value.StartTime))
+                    {
+                        <article class="schedule-event"><div class="event-time">@item.StartTime[..5]<small>@item.EndTime[..5]</small></div><div class="event-details"><strong>@item.CourseCode</strong><span>Phòng @item.Room</span></div><a href="@($"/courses/{item.CourseSectionId}")">Chi tiết →</a></article>
+                    }
+                </div>
+            </section>
+        }
+    </div>
+    <p class="muted schedule-note">Lịch học hiển thị theo dữ liệu lớp hiện tại.</p>
+}
+
+@code {
+    private IReadOnlyList<StudentScheduleDto> _entries = Array.Empty<StudentScheduleDto>();
+    private bool _loading = true;
+    private string? _error;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        try { _entries = await Api.GetScheduleAsync(); }
+        catch (ApiException exception) { _error = exception.Message; }
+        catch (HttpRequestException) { _error = "Không kết nối được máy chủ."; }
+        finally { _loading = false; }
+    }
+}

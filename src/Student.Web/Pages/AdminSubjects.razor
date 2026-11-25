@@ -1,0 +1,107 @@
+@page "/admin/subjects"
+@attribute [UiAuthorize("Admin")]
+@inject ApiClient Api
+
+<PageTitle>Môn học · Quản trị CourseFlow</PageTitle>
+<div class="page-heading"><div><span class="eyebrow">QUẢN TRỊ</span><h1>Môn học</h1><p class="muted">Tạo môn hoặc cập nhật thông tin, trạng thái.</p></div><a class="button button-secondary" href="/admin">← Tổng quan</a></div>
+<nav class="admin-nav" aria-label="Quản trị"><a href="/admin/subjects">Môn học</a><a href="/admin/courses">Lớp học phần</a><a href="/admin/students">Sinh viên</a><a href="/admin/audit-logs">Audit log</a></nav>
+@if (!string.IsNullOrWhiteSpace(_message)) { <div class="notice @(_isError ? "notice-error" : "notice-success")" role="status">@_message</div> }
+<section class="content-panel admin-form-panel">
+    <div class="panel-heading"><div><span class="eyebrow">@(_form.Id.HasValue ? "CẬP NHẬT" : "TẠO MỚI")</span><h2>@(_form.Id.HasValue ? _form.Name : "Môn học")</h2></div>@if (_form.Id.HasValue) { <button class="button button-quiet" @onclick="ResetForm">Bỏ chọn</button> }</div>
+    <EditForm Model="_form" OnValidSubmit="SaveAsync">
+        <DataAnnotationsValidator />
+        <div class="admin-form-grid">
+            <div class="form-field"><label>Mã môn</label><InputText class="form-control" @bind-Value="_form.Code" maxlength="32" /></div>
+            <div class="form-field"><label>Tên môn</label><InputText class="form-control" @bind-Value="_form.Name" maxlength="160" /></div>
+            <div class="form-field"><label>Số tín chỉ</label><InputNumber class="form-control" @bind-Value="_form.Credits" min="1" max="30" /></div>
+            @if (_form.Id.HasValue) { <label class="check-field"><InputCheckbox @bind-Value="_form.IsActive" /> Đang hoạt động · version @_form.ExpectedVersion</label> }
+        </div>
+        <ValidationSummary />
+        <button class="button button-primary" type="submit" disabled="@_saving">@(_saving ? "Đang lưu..." : _form.Id.HasValue ? "Lưu thay đổi" : "Tạo môn")</button>
+    </EditForm>
+</section>
+<section class="content-panel table-panel">
+    <div class="panel-heading"><div><span class="eyebrow">DANH MỤC</span><h2>@_totalCount môn học</h2></div><button class="button button-secondary" @onclick="LoadAsync">Tải lại</button></div>
+    @if (_loading) { <div class="loading">Đang tải môn học...</div> }
+    else if (_error is not null) { <div class="notice notice-error">@_error</div> }
+    else if (_subjects.Count == 0) { <div class="empty-state"><h2>Chưa có môn học</h2></div> }
+    else
+    {
+        <div class="table-scroll"><table class="admin-table"><thead><tr><th>Mã</th><th>Tên môn</th><th>Tín chỉ</th><th>Trạng thái</th><th>Phiên bản</th><th></th></tr></thead><tbody>
+        @foreach (var subject in _subjects)
+        {
+            <tr><td><strong>@subject.Code</strong></td><td>@subject.Name</td><td>@subject.Credits</td><td>@(subject.IsActive ? "Đang hoạt động" : "Đã ẩn")</td><td>@subject.Version</td><td><button class="text-button" @onclick="() => Edit(subject)">Sửa</button></td></tr>
+        }
+        </tbody></table></div>
+        <div class="pagination"><button class="button button-secondary" disabled="@(_page <= 1)" @onclick="PreviousPage">← Trước</button><span>Trang @_page</span><button class="button button-secondary" disabled="@(_subjects.Count < _pageSize)" @onclick="NextPage">Tiếp →</button></div>
+    }
+</section>
+
+@code {
+    private const int _pageSize = 25;
+    private IReadOnlyList<SubjectDto> _subjects = Array.Empty<SubjectDto>();
+    private SubjectForm _form = new();
+    private bool _loading = true, _saving, _isError;
+    private int _page = 1;
+    private long _totalCount;
+    private string? _error, _message;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true; _error = null;
+        try
+        {
+            var result = await Api.GetAdminSubjectsAsync(page: _page, pageSize: _pageSize);
+            _subjects = result.Items; _totalCount = result.TotalCount;
+        }
+        catch (ApiException exception) { _error = exception.Message; }
+        catch (HttpRequestException) { _error = "Không kết nối được máy chủ."; }
+        finally { _loading = false; }
+    }
+
+    private void Edit(SubjectDto subject) => _form = new SubjectForm
+    {
+        Id = subject.Id, Code = subject.Code, Name = subject.Name, Credits = subject.Credits,
+        IsActive = subject.IsActive, ExpectedVersion = subject.Version
+    };
+
+    private void ResetForm() => _form = new SubjectForm();
+
+    private async Task SaveAsync()
+    {
+        _saving = true; _message = null; _isError = false;
+        try
+        {
+            var input = new SubjectEditDto(_form.Code.Trim(), _form.Name.Trim(), _form.Credits,
+                _form.Id is null || _form.IsActive, _form.ExpectedVersion);
+            var result = _form.Id.HasValue
+                ? await Api.UpdateSubjectAsync(_form.Id.Value, input)
+                : await Api.CreateSubjectAsync(input);
+            _message = $"Đã lưu môn {result.Code}.";
+            ResetForm(); await LoadAsync();
+        }
+        catch (ApiException exception) { _isError = true; _message = exception.Message; }
+        catch (HttpRequestException) { _isError = true; _message = "Không kết nối được máy chủ."; }
+        finally { _saving = false; }
+    }
+
+    private async Task PreviousPage() { _page--; await LoadAsync(); }
+    private async Task NextPage() { _page++; await LoadAsync(); }
+
+    private sealed class SubjectForm
+    {
+        public Guid? Id { get; set; }
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Nhập mã môn.")]
+        [System.ComponentModel.DataAnnotations.StringLength(32, MinimumLength = 2)]
+        public string Code { get; set; } = string.Empty;
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Nhập tên môn.")]
+        [System.ComponentModel.DataAnnotations.StringLength(160, MinimumLength = 2)]
+        public string Name { get; set; } = string.Empty;
+        [System.ComponentModel.DataAnnotations.Range(1, 30)]
+        public int Credits { get; set; } = 3;
+        public bool IsActive { get; set; } = true;
+        public long ExpectedVersion { get; set; }
+    }
+}

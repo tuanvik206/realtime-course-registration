@@ -1,0 +1,41 @@
+@page "/admin/students"
+@attribute [UiAuthorize("Admin")]
+@inject ApiClient Api
+
+<PageTitle>Sinh viên · Quản trị CourseFlow</PageTitle>
+<div class="page-heading"><div><span class="eyebrow">QUẢN TRỊ</span><h1>Sinh viên</h1><p class="muted">Hồ sơ tối thiểu từ identity database.</p></div><a class="button button-secondary" href="/admin">← Tổng quan</a></div>
+<nav class="admin-nav" aria-label="Quản trị"><a href="/admin/subjects">Môn học</a><a href="/admin/courses">Lớp học phần</a><a href="/admin/students">Sinh viên</a><a href="/admin/audit-logs">Audit log</a></nav>
+<section class="content-panel table-panel">
+    <div class="panel-heading"><div><span class="eyebrow">HỒ SƠ</span><h2>@_totalCount sinh viên</h2></div><div class="toolbar-row"><input class="form-control admin-search" @bind="_search" @bind:event="oninput" placeholder="Mã SV, tên, email..." /><button class="button button-secondary" @onclick="LoadAsync">Tìm</button></div></div>
+    @if (_loading) { <div class="loading">Đang tải danh sách...</div> }
+    else if (_error is not null) { <div class="notice notice-error">@_error <button class="text-button" @onclick="LoadAsync">Thử lại</button></div> }
+    else if (_students.Count == 0) { <div class="empty-state"><h2>Không có hồ sơ phù hợp</h2></div> }
+    else
+    {
+        <div class="table-scroll"><table class="admin-table"><thead><tr><th>Mã sinh viên</th><th>Họ tên</th><th>Ngành</th><th>Email</th><th>Tài khoản</th><th>Trạng thái</th></tr></thead><tbody>
+        @foreach (var student in _students) { <tr><td><strong>@student.StudentCode</strong></td><td>@student.FullName</td><td>@(student.Major ?? "—")</td><td>@(student.Email ?? "—")</td><td>@student.Username</td><td>@(student.IsActive ? "Đang hoạt động" : "Đã khóa")</td></tr> }
+        </tbody></table></div>
+        <div class="pagination"><button class="button button-secondary" disabled="@(_page <= 1)" @onclick="PreviousPage">← Trước</button><span>Trang @_page</span><button class="button button-secondary" disabled="@(_students.Count < _pageSize)" @onclick="NextPage">Tiếp →</button></div>
+    }
+</section>
+
+@code {
+    private const int _pageSize = 25;
+    private IReadOnlyList<AdminStudentDto> _students = Array.Empty<AdminStudentDto>();
+    private string _search = string.Empty;
+    private bool _loading = true;
+    private int _page = 1;
+    private long _totalCount;
+    private string? _error;
+    protected override Task OnInitializedAsync() => LoadAsync();
+    private async Task LoadAsync()
+    {
+        _loading = true; _error = null;
+        try { var result = await Api.GetAdminStudentsAsync(_search, _page, _pageSize); _students = result.Items; _totalCount = result.TotalCount; }
+        catch (ApiException exception) { _error = exception.Message; }
+        catch (HttpRequestException) { _error = "Không kết nối được máy chủ."; }
+        finally { _loading = false; }
+    }
+    private async Task PreviousPage() { _page--; await LoadAsync(); }
+    private async Task NextPage() { _page++; await LoadAsync(); }
+}

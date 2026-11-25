@@ -1,0 +1,15 @@
+.git
+.gitignore
+**/bin
+**/obj
+**/TestResults
+**/.vs
+**/.vscode
+.env
+.env.*
+!.env.example
+*.user
+*.suo
+artifacts
+coverage
+node_modules

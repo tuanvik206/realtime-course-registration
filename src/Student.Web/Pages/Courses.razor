@@ -1,0 +1,275 @@
+@page "/courses"
+@implements IAsyncDisposable
+@attribute [UiAuthorize("Student,Admin")]
+@inject ApiClient Api
+@inject ClientSessionStore Auth
+@inject RealtimeCourseClient Realtime
+
+<PageTitle>Danh sách lớp · CourseFlow</PageTitle>
+<div class="page-heading">
+    <div><span class="eyebrow">HỌC KỲ HIỆN TẠI</span><h1>Danh sách lớp</h1><p class="muted">Tìm lớp học phần và kiểm tra số chỗ còn lại.</p></div>
+    <span class="connection-status @(_hubState == "Connected" ? "is-connected" : "")" role="status">@ConnectionLabel</span>
+</div>
+<section class="content-panel filter-panel">
+    <div class="search-field"><span aria-hidden="true">⌕</span><input aria-label="Tìm theo mã lớp hoặc môn học" placeholder="Tìm theo mã lớp hoặc tên môn..." @bind="_search" @bind:event="oninput" @onkeydown="OnSearchKeyDown" /></div>
+    <select class="select-control" aria-label="Lọc trạng thái" @bind="_status">
+        <option value="">Tất cả trạng thái</option>
+        <option value="Open">Đang mở</option>
+        <option value="Closed">Đã đóng</option>
+    </select>
+    <button class="button button-secondary" @onclick="LoadAsync">Tìm kiếm</button>
+</section>
+@if (!string.IsNullOrWhiteSpace(_message))
+{
+    <div class="notice @(_isError ? "notice-error" : "notice-success")" role="status">@_message</div>
+}
+@if (!string.IsNullOrWhiteSpace(_registrationWarning))
+{
+    <div class="notice notice-info" role="status">@_registrationWarning</div>
+}
+@if (_loading)
+{
+    <div class="loading">Đang tải danh sách lớp...</div>
+}
+else if (_error is not null)
+{
+    <div class="notice notice-error">@_error <button class="text-button" @onclick="LoadAsync">Thử lại</button></div>
+}
+else if (_result is { Items.Count: 0 })
+{
+    <div class="empty-state"><span>⌕</span><h2>Chưa tìm thấy lớp phù hợp</h2><p>Thử từ khóa khác hoặc bỏ bớt bộ lọc.</p></div>
+}
+else if (_result is not null)
+{
+    <div class="results-caption"><span><strong>@_result.TotalCount</strong> lớp học phần</span><span>Trang @_result.Page / @TotalPages</span></div>
+    <section class="course-grid">
+        @foreach (var course in _result.Items)
+        {
+            <article class="course-card">
+                <div class="course-card-top"><span class="course-code">@course.CourseCode</span><span class="badge @(course.Status == "Open" ? "badge-open" : "badge-closed")">@(course.Status == "Open" ? "Đang mở" : "Đã đóng")</span></div>
+                <h2>@course.SubjectName</h2>
+                <p class="course-subtitle">@course.SubjectCode · @course.Credits tín chỉ · @course.LecturerName</p>
+                <div class="seat-row"><span>Còn chỗ</span><strong>@course.RemainingSeats <small>/ @course.Capacity</small></strong></div>
+                <div class="progress-track"><div class="progress-fill @(course.RemainingSeats == 0 ? "full" : "")" style="width:@CapacityPercent(course)%"></div></div>
+                @if (course.Schedules.Count > 0)
+                {
+                    <div class="schedule-preview"><span>▦</span>@string.Join(" · ", course.Schedules.Select(item => $"Thứ {item.DayOfWeek}, {item.StartTime[..5]}–{item.EndTime[..5]}"))</div>
+                }
+                <div class="course-card-actions">
+                    <a class="button button-secondary" href="@($"/courses/{course.Id:D}")">Chi tiết</a>
+                    @if (Auth.Session?.Role == "Student")
+                    {
+                            <button class="button button-primary" disabled="@(_busyCourse == course.Id || course.Status != "Open" || course.RemainingSeats == 0 || _registeredCourseIds.Contains(course.Id))"
+                                    @onclick="() => RegisterAsync(course)">
+                                @(_busyCourse == course.Id ? "Đang gửi..." : _registeredCourseIds.Contains(course.Id) ? "Đã đăng ký" : "Đăng ký")
+                            </button>
+                            @if (_retryCourse == course.Id)
+                            {
+                                <button class="button button-quiet" @onclick="() => RegisterAsync(course, retry: true)">Thử lại cùng mã</button>
+                            }
+                    }
+                </div>
+            </article>
+        }
+    </section>
+    <div class="pagination">
+        <button class="button button-secondary" disabled="@(_page <= 1)" @onclick="PreviousPage">← Trước</button>
+        <span>Trang @_page</span>
+        <button class="button button-secondary" disabled="@(_result.Items.Count < _pageSize)" @onclick="NextPage">Tiếp →</button>
+    </div>
+}
+
+@code {
+    private const int _pageSize = 8;
+    private readonly Dictionary<Guid, Guid> _operationKeys = new();
+    private readonly HashSet<Guid> _registeredCourseIds = new();
+    private PagedResult<CourseDto>? _result;
+    private string _search = string.Empty;
+    private string _status = string.Empty;
+    private string? _error;
+    private string? _message;
+    private bool _isError;
+    private bool _loading = true;
+    private int _page = 1;
+    private Guid? _busyCourse;
+    private Guid? _retryCourse;
+    private string _hubState = "Connecting";
+    private bool _hubStarted;
+    private CancellationTokenSource? _pollCancellation;
+    private string? _registrationWarning;
+
+    private string ConnectionLabel => _hubState switch
+    {
+        "Connected" => "● Dữ liệu trực tiếp",
+        "Connecting" => "◌ Đang kết nối realtime",
+        "Reconnecting" => "◌ Đang kết nối lại",
+        _ => "○ Mất kết nối · dữ liệu có thể cũ"
+    };
+
+    private int TotalPages => _result is null ? 1 : Math.Max(1, (int)Math.Ceiling(_result.TotalCount / (double)_result.PageSize));
+
+    protected override Task OnInitializedAsync()
+    {
+        Realtime.CapacityUpdated += OnCapacityUpdated;
+        Realtime.CatalogChanged += OnCatalogChanged;
+        Realtime.ConnectionStateChanged += OnConnectionStateChanged;
+        Realtime.Reconnected += OnReconnected;
+        return LoadAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_hubStarted && Auth.IsAuthenticated && Auth.Session is not null && _result is not null)
+        {
+            _hubStarted = true;
+            await Realtime.StartAsync(_result.Items.Select(item => item.Id), Auth.Session.AccessToken);
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+        _registrationWarning = null;
+        try
+        {
+            _result = await Api.GetCoursesAsync(_search, _status, _page, _pageSize);
+            try
+            {
+                await LoadRegisteredCoursesAsync();
+            }
+            catch (ApiException) { _registrationWarning = "Không tải được danh sách đăng ký hiện tại; máy chủ vẫn kiểm tra trùng khi gửi."; }
+            catch (HttpRequestException) { _registrationWarning = "Không xác minh được đăng ký hiện tại; máy chủ vẫn kiểm tra trùng khi gửi."; }
+            if (_hubStarted) await Realtime.SetCoursesAsync(_result.Items.Select(item => item.Id));
+        }
+        catch (ApiException exception) { _error = exception.Message; }
+        catch (HttpRequestException) { _error = "Không kết nối được máy chủ."; }
+        finally { _loading = false; }
+    }
+
+    private async Task LoadRegisteredCoursesAsync()
+    {
+        _registeredCourseIds.Clear();
+        if (Auth.Session?.Role != "Student") return;
+        var registrationsPage = 1;
+        PagedResult<RegistrationDto> registrations;
+        do
+        {
+            registrations = await Api.GetRegistrationsAsync("Active", registrationsPage, 100);
+            foreach (var registration in registrations.Items) _registeredCourseIds.Add(registration.CourseSectionId);
+            registrationsPage++;
+        }
+        while (registrationsPage <= (int)Math.Ceiling(registrations.TotalCount / 100d));
+    }
+
+    private async Task OnSearchKeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter") { _page = 1; await LoadAsync(); }
+    }
+
+    private async Task RegisterAsync(CourseDto course, bool retry = false)
+    {
+        _busyCourse = course.Id;
+        _retryCourse = null;
+        _message = null;
+        var key = retry || _operationKeys.TryGetValue(course.Id, out _)
+            ? _operationKeys[course.Id]
+            : Guid.NewGuid();
+        _operationKeys[course.Id] = key;
+        try
+        {
+            await Api.RegisterAsync(course.Id, key);
+            _operationKeys.Remove(course.Id);
+            _isError = false;
+            _message = $"Đã đăng ký lớp {course.CourseCode}.";
+            await LoadAsync();
+        }
+        catch (ApiException exception)
+        {
+            if (exception.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
+            {
+                _retryCourse = course.Id;
+                _isError = true;
+                _message = "Chưa xác định được kết quả đăng ký. Hãy thử lại bằng cùng mã thao tác.";
+            }
+            else
+            {
+                _operationKeys.Remove(course.Id);
+                _isError = true;
+                _message = exception.Message;
+                await LoadAsync();
+            }
+        }
+        catch (HttpRequestException)
+        {
+            _retryCourse = course.Id;
+            _isError = true;
+            _message = "Mất kết nối trong lúc gửi. Hãy thử lại bằng cùng mã thao tác.";
+        }
+        finally { _busyCourse = null; }
+    }
+
+    private async Task PreviousPage() { _page--; await LoadAsync(); }
+    private async Task NextPage() { _page++; await LoadAsync(); }
+    private static int CapacityPercent(CourseDto course) =>
+        course.Capacity <= 0 ? 0 : Math.Clamp((int)Math.Round(course.RegisteredCount * 100d / course.Capacity), 0, 100);
+
+    private void OnCapacityUpdated(CourseAvailabilityUpdate update) => _ = InvokeAsync(() =>
+    {
+        if (_result is null) return;
+        var index = _result.Items.ToList().FindIndex(item => item.Id == update.CourseSectionId);
+        if (index < 0 || update.Version <= _result.Items[index].Version) return;
+        var items = _result.Items.ToArray();
+        items[index] = items[index] with
+        {
+            Capacity = update.Capacity, RegisteredCount = update.RegisteredCount,
+            RemainingSeats = update.RemainingSeats, Status = update.Status, Version = update.Version
+        };
+        _result = _result with { Items = items };
+        StateHasChanged();
+    });
+
+    private void OnCatalogChanged(Guid courseSectionId) => _ = InvokeAsync(LoadAsync);
+
+    private void OnConnectionStateChanged(string state) => _ = InvokeAsync(() =>
+    {
+        _hubState = state;
+        if (state == "Connected")
+        {
+            _pollCancellation?.Cancel();
+            _pollCancellation = null;
+        }
+        else if (_pollCancellation is null)
+        {
+            _pollCancellation = new CancellationTokenSource();
+            _ = PollWhileOfflineAsync(_pollCancellation.Token);
+        }
+        StateHasChanged();
+    });
+
+    private async Task PollWhileOfflineAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(15), cancellationToken);
+                if (_hubState != "Connected" && Auth.IsAuthenticated) await InvokeAsync(LoadAsync);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
+    }
+
+    private Task OnReconnected() => InvokeAsync(LoadAsync);
+
+    public async ValueTask DisposeAsync()
+    {
+        Realtime.CapacityUpdated -= OnCapacityUpdated;
+        Realtime.CatalogChanged -= OnCatalogChanged;
+        Realtime.ConnectionStateChanged -= OnConnectionStateChanged;
+        Realtime.Reconnected -= OnReconnected;
+        _pollCancellation?.Cancel();
+        _pollCancellation?.Dispose();
+        await Realtime.DisposeAsync();
+    }
+}

@@ -1,0 +1,55 @@
+@page "/admin/audit-logs"
+@attribute [UiAuthorize("Admin")]
+@inject ApiClient Api
+
+<PageTitle>Audit log · Quản trị CourseFlow</PageTitle>
+<div class="page-heading"><div><span class="eyebrow">QUẢN TRỊ</span><h1>Audit log</h1><p class="muted">Lịch sử sự kiện được lưu độc lập bởi Audit Worker.</p></div><a class="button button-secondary" href="/admin">← Tổng quan</a></div>
+<nav class="admin-nav" aria-label="Quản trị"><a href="/admin/subjects">Môn học</a><a href="/admin/courses">Lớp học phần</a><a href="/admin/students">Sinh viên</a><a href="/admin/audit-logs">Audit log</a></nav>
+<section class="content-panel filter-panel">
+    <div class="form-field"><label for="eventType">Loại sự kiện</label><select id="eventType" class="select-control" @bind="_eventType"><option value="">Tất cả</option><option>RegistrationCreated</option><option>RegistrationCancelled</option><option>CourseCapacityChanged</option><option>CourseStatusChanged</option><option>CourseCreated</option><option>CourseUpdated</option></select></div>
+    <div class="form-field"><label for="courseId">Mã lớp (UUID)</label><input id="courseId" class="form-control" @bind="_courseId" /></div>
+    <div class="form-field"><label for="studentId">Mã sinh viên (UUID)</label><input id="studentId" class="form-control" @bind="_studentId" /></div>
+    <button class="button button-secondary" @onclick="ApplyFilter">Lọc</button>
+</section>
+@if (_error is not null) { <div class="notice notice-error">@_error <button class="text-button" @onclick="LoadAsync">Thử lại</button></div> }
+else if (_loading) { <div class="loading">Đang tải audit log...</div> }
+else if (_result is { Items.Count: 0 }) { <div class="empty-state"><h2>Không có sự kiện phù hợp</h2></div> }
+else if (_result is not null)
+{
+    <section class="content-panel table-panel"><div class="panel-heading"><div><span class="eyebrow">SỰ KIỆN LƯU TRỮ</span><h2>@_result.TotalCount bản ghi</h2></div></div>
+        <div class="table-scroll"><table class="admin-table"><thead><tr><th>Thời điểm</th><th>Sự kiện</th><th>Lớp</th><th>Đăng ký</th><th>Sức chứa</th><th>Trạng thái</th><th>Version</th></tr></thead><tbody>
+        @foreach (var item in _result.Items) { <tr><td>@item.OccurredAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</td><td><strong>@item.EventType</strong><small>@item.EventId</small></td><td>@item.CourseSectionId</td><td>@item.RegisteredCount / @item.Capacity</td><td>@item.RemainingSeats</td><td>@item.Status</td><td>@item.Version</td></tr> }
+        </tbody></table></div>
+        <div class="pagination"><button class="button button-secondary" disabled="@(_page <= 1)" @onclick="PreviousPage">← Trước</button><span>Trang @_page</span><button class="button button-secondary" disabled="@(_result.Items.Count < _result.PageSize)" @onclick="NextPage">Tiếp →</button></div>
+    </section>
+}
+
+@code {
+    private PagedResult<AuditLogDto>? _result;
+    private bool _loading = true;
+    private string? _error, _eventType, _courseId, _studentId;
+    private Guid? _courseFilter, _studentFilter;
+    private int _page = 1;
+    protected override Task OnInitializedAsync() => LoadAsync();
+    private async Task ApplyFilter()
+    {
+        _page = 1; _error = null;
+        if (!string.IsNullOrWhiteSpace(_courseId) && (!Guid.TryParse(_courseId, out var course) || course == Guid.Empty))
+        { _error = "Mã lớp phải là UUID hợp lệ."; return; }
+        if (!string.IsNullOrWhiteSpace(_studentId) && (!Guid.TryParse(_studentId, out var student) || student == Guid.Empty))
+        { _error = "Mã sinh viên phải là UUID hợp lệ."; return; }
+        _courseFilter = string.IsNullOrWhiteSpace(_courseId) ? null : Guid.Parse(_courseId);
+        _studentFilter = string.IsNullOrWhiteSpace(_studentId) ? null : Guid.Parse(_studentId);
+        await LoadAsync();
+    }
+    private async Task LoadAsync()
+    {
+        _loading = true; _error = null;
+        try { _result = await Api.GetAuditLogsAsync(_eventType, _courseFilter, _studentFilter, _page, 25); }
+        catch (ApiException exception) { _error = exception.Message; }
+        catch (HttpRequestException) { _error = "Audit Worker không kết nối được."; }
+        finally { _loading = false; }
+    }
+    private async Task PreviousPage() { _page--; await LoadAsync(); }
+    private async Task NextPage() { _page++; await LoadAsync(); }
+}

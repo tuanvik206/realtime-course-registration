@@ -1,0 +1,56 @@
+@using System.Reflection
+@inject ClientSessionStore Session
+@inject NavigationManager Navigation
+
+@if (_forbidden)
+{
+    <LayoutView Layout="@typeof(MainLayout)">
+        <PageTitle>Không có quyền · CourseFlow</PageTitle>
+        <section class="empty-state">
+            <span>⌑</span>
+            <h1>Không có quyền truy cập</h1>
+            <p>Tài khoản hiện tại không được phép mở trang này.</p>
+            <a class="button button-primary" href="/dashboard">Về tổng quan</a>
+        </section>
+    </LayoutView>
+}
+else if (_allowed)
+{
+    <RouteView RouteData="@RouteData" DefaultLayout="@typeof(MainLayout)" />
+}
+else
+{
+    <LayoutView Layout="@typeof(EmptyLayout)">
+        <div class="loading">Đang chuyển đến trang đăng nhập...</div>
+    </LayoutView>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public RouteData RouteData { get; set; } = default!;
+
+    private bool _allowed;
+    private bool _forbidden;
+
+    protected override void OnParametersSet()
+    {
+        var requirement = RouteData.PageType.GetCustomAttribute<UiAuthorizeAttribute>(inherit: true);
+        _forbidden = false;
+        if (requirement is null)
+        {
+            _allowed = true;
+            return;
+        }
+
+        if (!Session.IsAuthenticated || Session.Session is null)
+        {
+            _allowed = false;
+            var returnUrl = Navigation.ToBaseRelativePath(Navigation.Uri);
+            Navigation.NavigateTo($"/login?returnUrl={Uri.EscapeDataString("/" + returnUrl)}", replace: true);
+            return;
+        }
+
+        _allowed = requirement.Roles.Contains(Session.Session.Role, StringComparer.OrdinalIgnoreCase);
+        _forbidden = !_allowed;
+    }
+}

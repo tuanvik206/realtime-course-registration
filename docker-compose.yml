@@ -1,0 +1,178 @@
+name: realtime-course-registration
+
+services:
+  postgres:
+    image: postgres:17.12
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?Run scripts/setup.ps1 to create a local .env}
+      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD:?Set IDENTITY_DB_PASSWORD in .env}
+      CAPACITY_DB_PASSWORD: ${CAPACITY_DB_PASSWORD:?Set CAPACITY_DB_PASSWORD in .env}
+      AUDIT_DB_PASSWORD: ${AUDIT_DB_PASSWORD:?Set AUDIT_DB_PASSWORD in .env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init-databases.sh:/docker-entrypoint-initdb.d/01-create-databases.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    networks:
+      - course-network
+
+  rabbitmq:
+    image: rabbitmq:4.4.1-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:?Set RABBITMQ_USER in .env}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks:
+      - course-network
+
+  capacity-service:
+    build:
+      context: .
+      dockerfile: src/CourseCapacity.Service/Dockerfile
+    restart: unless-stopped
+    environment:
+      ConnectionStrings__CapacityDb: "Host=postgres;Database=capacity_db;Username=capacity_app;Password=${CAPACITY_DB_PASSWORD:?Set CAPACITY_DB_PASSWORD in .env};Timeout=5;Command Timeout=10"
+      Migrations__ApplyOnStartup: "true"
+      Seed__Enabled: ${DEMO_SEED_ENABLED:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://127.0.0.1:8081/health/ready || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 30s
+    networks:
+      - course-network
+
+  registration-api:
+    build:
+      context: .
+      dockerfile: src/Registration.Api/Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__IdentityDb: "Host=postgres;Database=identity_db;Username=identity_app;Password=${IDENTITY_DB_PASSWORD:?Set IDENTITY_DB_PASSWORD in .env};Timeout=5;Command Timeout=10"
+      Grpc__CapacityAddress: http://capacity-service:8080
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env}
+      Jwt__Issuer: ${JWT_ISSUER:-course-registration}
+      Jwt__Audience: ${JWT_AUDIENCE:-course-web}
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER:?Set RABBITMQ_USER in .env}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
+      Audit__BaseAddress: http://audit-worker:8080
+      Audit__InternalApiKey: ${AUDIT_INTERNAL_API_KEY:?Set AUDIT_INTERNAL_API_KEY in .env}
+      Migrations__ApplyOnStartup: "true"
+      Seed__Enabled: ${DEMO_SEED_ENABLED:-true}
+      Seed__AdminPassword: ${DEMO_ADMIN_PASSWORD:?Set DEMO_ADMIN_PASSWORD in .env}
+      Seed__StudentPassword: ${DEMO_STUDENT_PASSWORD:?Set DEMO_STUDENT_PASSWORD in .env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      capacity-service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://127.0.0.1:8080/health/ready || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 45s
+    networks:
+      - course-network
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: src/Notification.Service/Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_HTTP_PORTS: "8080"
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:?Set JWT_SIGNING_KEY in .env}
+      Jwt__Issuer: ${JWT_ISSUER:-course-registration}
+      Jwt__Audience: ${JWT_AUDIENCE:-course-web}
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER:?Set RABBITMQ_USER in .env}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://127.0.0.1:8080/health/ready || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 20s
+    networks:
+      - course-network
+
+  audit-worker:
+    build:
+      context: .
+      dockerfile: src/Audit.Worker/Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__AuditDb: "Host=postgres;Database=audit_db;Username=audit_app;Password=${AUDIT_DB_PASSWORD:?Set AUDIT_DB_PASSWORD in .env};Timeout=5;Command Timeout=10"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER:?Set RABBITMQ_USER in .env}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD in .env}
+      Audit__InternalApiKey: ${AUDIT_INTERNAL_API_KEY:?Set AUDIT_INTERNAL_API_KEY in .env}
+      Migrations__ApplyOnStartup: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent http://127.0.0.1:8080/health/ready || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 30s
+    networks:
+      - course-network
+
+  student-web:
+    build:
+      context: .
+      dockerfile: src/Student.Web/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${WEB_PORT:-3000}:8080"
+    depends_on:
+      registration-api:
+        condition: service_started
+      notification-service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/ || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    networks:
+      - course-network
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
+
+networks:
+  course-network:
+    driver: bridge
