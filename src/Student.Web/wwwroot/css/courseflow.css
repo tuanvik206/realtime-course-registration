@@ -41,8 +41,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .profile-copy small { color: #aab9ce; font-size: 11px; }
 .icon-button { width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: #b7c5d8; font-size: 18px; cursor: pointer; }
 .icon-button:hover { background: #203b63; color: white; }
-.main-content { width: calc(100% - 252px); min-height: 100vh; margin-left: 252px; }
-.page-content { width: 100%; max-width: 1600px; margin: 0 auto; padding: 44px clamp(24px, 3vw, 48px) 60px; }
+.main-content { flex: 1 1 auto; min-width: 0; min-height: 100vh; margin-left: 252px; }
+.page-content { width: 100%; max-width: none; margin: 0; padding: 44px clamp(24px, 3vw, 48px) 60px; }
 .mobile-header { display: none; }
 .page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin: 0 0 28px; }
 .page-heading h1 { margin: 7px 0 6px; color: #17263d; font-size: clamp(28px, 3vw, 36px); font-weight: 740; letter-spacing: -.045em; }
@@ -220,11 +220,11 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
     .page-content { padding: 34px 28px 48px; }
     .course-grid { grid-template-columns: 1fr; }
     .sidebar { width: 220px; }
-    .main-content { width: calc(100% - 220px); margin-left: 220px; }
+    .main-content { margin-left: 220px; }
 }
 @media (max-width: 720px) {
     .sidebar { display: none; }
-    .main-content { width: 100%; margin-left: 0; }
+    .main-content { margin-left: 0; }
     .mobile-header { position: sticky; top: 0; z-index: 4; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 11px 16px; border-bottom: 1px solid var(--line); background: #fff; }
     .brand.compact { color: var(--navy); font-size: 14px; }
     .brand.compact .brand-mark { width: 31px; height: 31px; border-radius: 9px; font-size: 11px; }

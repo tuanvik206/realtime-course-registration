@@ -122,7 +122,16 @@ else if (_result is not null)
         if (!_hubStarted && Auth.IsAuthenticated && Auth.Session is not null && _result is not null)
         {
             _hubStarted = true;
-            await Realtime.StartAsync(_result.Items.Select(item => item.Id), Auth.Session.AccessToken);
+            try
+            {
+                await Realtime.StartAsync(_result.Items.Select(item => item.Id), Auth.Session.AccessToken);
+            }
+            catch (Microsoft.JSInterop.JSException)
+            {
+                _hubState = "Disconnected";
+                StartPolling();
+                StateHasChanged();
+            }
         }
     }
 
@@ -239,13 +248,16 @@ else if (_result is not null)
             _pollCancellation?.Cancel();
             _pollCancellation = null;
         }
-        else if (_pollCancellation is null)
-        {
-            _pollCancellation = new CancellationTokenSource();
-            _ = PollWhileOfflineAsync(_pollCancellation.Token);
-        }
+        else StartPolling();
         StateHasChanged();
     });
+
+    private void StartPolling()
+    {
+        if (_pollCancellation is not null) return;
+        _pollCancellation = new CancellationTokenSource();
+        _ = PollWhileOfflineAsync(_pollCancellation.Token);
+    }
 
     private async Task PollWhileOfflineAsync(CancellationToken cancellationToken)
     {
