@@ -110,7 +110,7 @@ Các phiên bản sau được kiểm tra từ trang dự án/registry chính th
 
 **Kết quả:** DONE.
 
-- Thêm requirements traceability, architecture, database design, REST/gRPC/event specification và 3 ADR về ownership, Outbox và same-origin proxy.
+- Thêm requirements traceability, architecture, database design, REST/gRPC/event specification và ghi rationale cho ownership, Outbox và same-origin trong architecture.md.
 - Thêm `capacity.proto` trong `Shared.Contracts`, sinh client/server một lần với `GrpcServices="Both"`; CourseCapacity host dùng service base mới, không còn compile Greeter sample.
 - Thêm integration-event envelope camelCase, schema/routing constants, validator, UUID parser, typed protobuf outcomes, REST error codes và ProblemDetails DTO.
 - Thêm tests cho protobuf round-trip, event JSON/validation, request ID và outcome mapping.

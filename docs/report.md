@@ -18,7 +18,7 @@ Sơ đồ, luồng đăng ký và ranh giới dữ liệu nằm tại [architect
 
 ## Kết quả kiểm thử
 
-Chỉ điền số lần pass/skip và runtime evidence sau khi thực chạy. Build hiện được xác nhận bằng Release build trên bản sao tạm. Compose runtime, hai trình duyệt, load, resilience và audit end-to-end chưa được xác nhận do Docker Engine không khả dụng trong phiên thực hiện. Xem [test-plan.md](test-plan.md) và [progress.md](progress.md).
+Release build pass với 0 warning/0 error; 16 unit tests pass. GitHub Actions run 45560049139 pass với PostgreSQL metadata/concurrency integration, Compose config và image build. Compose runtime, hai trình duyệt, failure injection, audit end-to-end và p95 chưa xác minh vì Docker Engine local không khả dụng. Xem [test-plan.md](test-plan.md) và [progress.md](progress.md).
 
 ## Giới hạn đã biết
 

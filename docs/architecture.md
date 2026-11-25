@@ -44,6 +44,12 @@ Nginx chạy trong container Student.Web, phục vụ static assets và proxy AP
 
 Delivery là **at-least-once**; không tuyên bố exactly-once. Outbox và subscriber dedup/versioning làm retry an toàn trong phạm vi thiết kế.
 
+## Quyết định thiết kế
+
+- **Dữ liệu theo service:** mỗi service chỉ sở hữu database của mình. Identity, đăng ký/sức chứa và audit được tách riêng; các bước cần bảo đảm số chỗ nằm chung transaction trong capacity database. ID sinh viên qua database chỉ là tham chiếu logic.
+- **Transactional Outbox:** nghiệp vụ và event được commit cùng nhau trong PostgreSQL, sau đó publisher gửi RabbitMQ với delivery at-least-once. Subscriber dedup theo event ID/version; thiết kế không tuyên bố exactly-once.
+- **Same-origin cho browser:** Nginx phục vụ giao diện và proxy REST/SignalR, giữ WebSocket, tránh CORS rộng và không log query token. Service gọi nhau bằng DNS nội bộ Docker.
+
 ## Công nghệ
 
 Các project target `net10.0`. Web UI là Blazor WebAssembly standalone. Phiên bản .NET packages được pin tập trung trong [`Directory.Packages.props`](../Directory.Packages.props); SDK và container images cũng dùng phiên bản cụ thể trong `global.json` và `docker-compose.yml`. Release restore/build đã xác minh package set trong môi trường hiện tại. Compose image build/runtime vẫn cần Docker Engine để kiểm chứng.
