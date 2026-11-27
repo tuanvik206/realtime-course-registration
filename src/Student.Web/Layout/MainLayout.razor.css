@@ -1,3 +1,5 @@
 .sidebar {
-    background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
+    background-image:
+        radial-gradient(circle at 12% 0%, rgb(72 122 211 / 24%), transparent 34%),
+        linear-gradient(180deg, #102b50 0%, #101f3a 100%);
 }
