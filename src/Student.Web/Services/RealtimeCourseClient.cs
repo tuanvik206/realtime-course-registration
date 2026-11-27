@@ -5,8 +5,8 @@ namespace Student.Web.Services;
 public sealed class RealtimeCourseClient(IJSRuntime jsRuntime) : IAsyncDisposable
 {
     private readonly HashSet<Guid> _courseIds = [];
+    private readonly string _connectionId = Guid.NewGuid().ToString("N");
     private IJSObjectReference? _module;
-    private IJSObjectReference? _connection;
     private DotNetObjectReference<RealtimeCourseClient>? _self;
 
     public event Action<CourseAvailabilityUpdate>? CapacityUpdated;
@@ -18,20 +18,21 @@ public sealed class RealtimeCourseClient(IJSRuntime jsRuntime) : IAsyncDisposabl
     {
         _courseIds.Clear();
         _courseIds.UnionWith(courseIds.Where(id => id != Guid.Empty));
-        if (_connection is not null) return;
+        if (_module is not null) return;
 
         _module = await jsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/courseHub.js");
         _self = DotNetObjectReference.Create(this);
-        _connection = await _module.InvokeAsync<IJSObjectReference>("createCourseHub", _self);
-        await _connection.InvokeVoidAsync("start", _courseIds.Select(id => id.ToString("D")).ToArray());
+        await _module.InvokeVoidAsync("startCourseHub", _connectionId, _self,
+            _courseIds.Select(id => id.ToString("D")).ToArray());
     }
 
     public async Task SetCoursesAsync(IEnumerable<Guid> courseIds)
     {
         _courseIds.Clear();
         _courseIds.UnionWith(courseIds.Where(id => id != Guid.Empty));
-        if (_connection is not null)
-            await _connection.InvokeVoidAsync("setCourses", _courseIds.Select(id => id.ToString("D")).ToArray());
+        if (_module is not null)
+            await _module.InvokeVoidAsync("setCourseIds", _connectionId,
+                _courseIds.Select(id => id.ToString("D")).ToArray());
     }
 
     [JSInvokable]
@@ -63,14 +64,19 @@ public sealed class RealtimeCourseClient(IJSRuntime jsRuntime) : IAsyncDisposabl
 
     public async ValueTask DisposeAsync()
     {
-        if (_connection is not null)
+        var module = _module;
+        _module = null;
+        if (module is not null)
         {
-            try { await _connection.InvokeVoidAsync("stop"); }
+            try { await module.InvokeVoidAsync("stopCourseHub", _connectionId); }
             catch (JSDisconnectedException) { }
-            await _connection.DisposeAsync();
+            catch (JSException) { }
+            try { await module.DisposeAsync(); }
+            catch (JSDisconnectedException) { }
+            catch (JSException) { }
         }
-        if (_module is not null) await _module.DisposeAsync();
         _self?.Dispose();
+        _self = null;
     }
 }
 

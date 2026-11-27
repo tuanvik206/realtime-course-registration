@@ -1,6 +1,25 @@
 const recordSeparator = String.fromCharCode(0x1e);
+const connections = new Map();
 
-export function createCourseHub(dotNet) {
+export function startCourseHub(connectionId, dotNet, courseIds) {
+    stopCourseHub(connectionId);
+    const connection = createCourseHub(dotNet);
+    connections.set(connectionId, connection);
+    connection.start(courseIds);
+}
+
+export function setCourseIds(connectionId, courseIds) {
+    connections.get(connectionId)?.setCourses(courseIds);
+}
+
+export function stopCourseHub(connectionId) {
+    const connection = connections.get(connectionId);
+    if (!connection) return;
+    connections.delete(connectionId);
+    connection.stop();
+}
+
+function createCourseHub(dotNet) {
     let socket = null;
     let disposed = false;
     let connected = false;
@@ -69,6 +88,7 @@ export function createCourseHub(dotNet) {
             credentials: "same-origin",
             cache: "no-store"
         });
+        if (disposed) return;
         if (!response.ok) throw new Error(`hub negotiate ${response.status}`);
         const negotiation = await response.json();
         if (!negotiation.connectionToken) throw new Error("hub negotiation response missing connection token");
@@ -84,7 +104,12 @@ export function createCourseHub(dotNet) {
                 resolve();
             }, { once: true });
             socket.addEventListener("error", () => reject(new Error("hub websocket failed")), { once: true });
+            socket.addEventListener("close", () => reject(new Error("hub websocket closed before opening")), { once: true });
         });
+        if (disposed) {
+            socket.close(1000, "component disposed");
+            return;
+        }
 
         socket.addEventListener("message", event => {
             buffer += typeof event.data === "string" ? event.data : "";
@@ -114,7 +139,7 @@ export function createCourseHub(dotNet) {
         notifyState("Disconnected");
     };
 
-    return DotNet.createJSObjectReference({
+    return {
         start(courseIds) {
             desiredCourses = new Set(courseIds ?? []);
             run();
@@ -123,9 +148,9 @@ export function createCourseHub(dotNet) {
             desiredCourses = new Set(courseIds ?? []);
             syncSubscriptions();
         },
-        async stop() {
+        stop() {
             disposed = true;
             socket?.close(1000, "component disposed");
         }
-    });
+    };
 }
