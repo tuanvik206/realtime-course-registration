@@ -124,7 +124,7 @@ else if (_result is not null)
             _hubStarted = true;
             try
             {
-                await Realtime.StartAsync(_result.Items.Select(item => item.Id), Auth.Session.AccessToken);
+                await Realtime.StartAsync(_result.Items.Select(item => item.Id));
             }
             catch (Microsoft.JSInterop.JSException)
             {

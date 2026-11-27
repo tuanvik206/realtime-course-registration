@@ -14,15 +14,15 @@ public sealed class RealtimeCourseClient(IJSRuntime jsRuntime) : IAsyncDisposabl
     public event Action<string>? ConnectionStateChanged;
     public event Func<Task>? Reconnected;
 
-    public async Task StartAsync(IEnumerable<Guid> courseIds, string accessToken)
+    public async Task StartAsync(IEnumerable<Guid> courseIds)
     {
         _courseIds.Clear();
         _courseIds.UnionWith(courseIds.Where(id => id != Guid.Empty));
-        if (_connection is not null || string.IsNullOrWhiteSpace(accessToken)) return;
+        if (_connection is not null) return;
 
         _module = await jsRuntime.InvokeAsync<IJSObjectReference>("import", "./js/courseHub.js");
         _self = DotNetObjectReference.Create(this);
-        _connection = await _module.InvokeAsync<IJSObjectReference>("createCourseHub", _self, accessToken);
+        _connection = await _module.InvokeAsync<IJSObjectReference>("createCourseHub", _self);
         await _connection.InvokeVoidAsync("start", _courseIds.Select(id => id.ToString("D")).ToArray());
     }
 

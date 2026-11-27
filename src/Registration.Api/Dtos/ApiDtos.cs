@@ -37,7 +37,8 @@ public sealed record UserProfileDto(
     string Username,
     string Role,
     Guid? StudentId,
-    string DisplayName);
+    string DisplayName,
+    DateTimeOffset ExpiresAt);
 
 public sealed record RegistrationRequest(Guid CourseSectionId);
 

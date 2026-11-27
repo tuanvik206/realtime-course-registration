@@ -1,6 +1,6 @@
 const recordSeparator = String.fromCharCode(0x1e);
 
-export function createCourseHub(dotNet, accessToken) {
+export function createCourseHub(dotNet) {
     let socket = null;
     let disposed = false;
     let connected = false;
@@ -66,7 +66,7 @@ export function createCourseHub(dotNet, accessToken) {
         negotiateUrl.searchParams.set("negotiateVersion", "1");
         const response = await fetch(negotiateUrl, {
             method: "POST",
-            headers: { Authorization: `Bearer ${accessToken}` },
+            credentials: "same-origin",
             cache: "no-store"
         });
         if (!response.ok) throw new Error(`hub negotiate ${response.status}`);
@@ -75,7 +75,6 @@ export function createCourseHub(dotNet, accessToken) {
 
         hubUrl.protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
         hubUrl.searchParams.set("id", negotiation.connectionToken);
-        hubUrl.searchParams.set("access_token", accessToken);
         buffer = "";
         handshakeComplete = false;
         socket = new WebSocket(hubUrl);

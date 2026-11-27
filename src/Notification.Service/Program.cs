@@ -44,6 +44,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 {
                     context.Token = token;
                 }
+                else if (string.IsNullOrEmpty(context.Token)
+                    && context.Request.Cookies.TryGetValue("courseflow.auth", out var cookieToken))
+                {
+                    context.Token = cookieToken;
+                }
                 return Task.CompletedTask;
             }
         };

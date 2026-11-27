@@ -15,6 +15,7 @@ public static class AuthEndpoints
     {
         var group = endpoints.MapGroup("/auth").WithTags("Authentication");
         group.MapPost("/login", LoginAsync).AllowAnonymous().RequireRateLimiting("login");
+        group.MapPost("/logout", LogoutAsync).AllowAnonymous();
         group.MapGet("/me", GetMe).RequireAuthorization();
         return endpoints;
     }
@@ -44,8 +45,15 @@ public static class AuthEndpoints
         }
 
         var (token, expiresAt) = tokenService.CreateToken(user);
+        httpContext.Response.Cookies.Append("courseflow.auth", token, CreateCookieOptions(httpContext, expiresAt));
         return Results.Ok(new LoginResponse(token, expiresAt, user.Role.ToString(), user.Student?.Id,
             user.Student?.FullName ?? user.Username));
+    }
+
+    private static IResult LogoutAsync(HttpContext httpContext)
+    {
+        httpContext.Response.Cookies.Delete("courseflow.auth", CreateCookieOptions(httpContext));
+        return Results.NoContent();
     }
 
     private static IResult GetMe(ClaimsPrincipal principal)
@@ -57,12 +65,31 @@ public static class AuthEndpoints
         var studentId = Guid.TryParse(principal.FindFirstValue("student_id"), out var parsedStudentId)
             ? parsedStudentId
             : (Guid?)null;
+        if (!long.TryParse(principal.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Exp), out var expiresUnix))
+        {
+            return Results.Unauthorized();
+        }
+
         return Results.Ok(new UserProfileDto(
             userId,
             principal.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.UniqueName)
                 ?? principal.Identity?.Name ?? string.Empty,
             principal.FindFirstValue(ClaimTypes.Role) ?? string.Empty,
             studentId,
-            principal.FindFirstValue("display_name") ?? string.Empty));
+            principal.FindFirstValue("display_name") ?? string.Empty,
+            DateTimeOffset.FromUnixTimeSeconds(expiresUnix)));
+    }
+
+    private static CookieOptions CreateCookieOptions(HttpContext httpContext, DateTimeOffset? expiresAt = null)
+    {
+        var forwardedHttps = string.Equals(httpContext.Request.Headers["X-Forwarded-Proto"], "https", StringComparison.OrdinalIgnoreCase);
+        return new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = httpContext.Request.IsHttps || forwardedHttps,
+            SameSite = SameSiteMode.Lax,
+            Path = "/",
+            Expires = expiresAt
+        };
     }
 }

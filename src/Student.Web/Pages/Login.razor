@@ -88,7 +88,7 @@
         {
             var result = await Api.LoginAsync(_model.Username.Trim(), _model.Password);
             await SaveRememberedAccountAsync(_model.Username.Trim());
-            Auth.SignIn(new ClientSession(result.AccessToken, result.ExpiresAt, result.Role, result.StudentId, result.DisplayName));
+            Auth.SignIn(new ClientSession(result.ExpiresAt, result.Role, result.StudentId, result.DisplayName));
             var destination = IsLocalReturnUrl(ReturnUrl)
                 ? ReturnUrl!
                 : result.Role == "Admin" ? "/admin" : "/dashboard";

@@ -1,5 +1,6 @@
 @inherits LayoutComponentBase
 @inject ClientSessionStore Auth
+@inject ApiClient Api
 @inject NavigationManager Navigation
 
 <div class="app-shell">
@@ -36,8 +37,12 @@
 </div>
 
 @code {
-    private void SignOut()
+    private async Task SignOut()
     {
+        try { await Api.LogoutAsync(); }
+        catch (ApiException) { }
+        catch (HttpRequestException) { }
+        catch (OperationCanceledException) { }
         Auth.SignOut();
         Navigation.NavigateTo("/login", forceLoad: false);
     }

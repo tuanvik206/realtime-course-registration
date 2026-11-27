@@ -67,13 +67,22 @@ a, .btn-link {
         content: "An error has occurred."
     }
 
+.initial-loading {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 1rem;
+    pointer-events: none;
+}
+
 .loading-progress {
-    position: absolute;
+    position: static;
     display: block;
     width: 8rem;
     height: 8rem;
-    inset: 20vh 0 auto 0;
-    margin: 0 auto 0 auto;
+    margin: 0;
 }
 
     .loading-progress circle {
@@ -91,10 +100,10 @@ a, .btn-link {
         }
 
 .loading-progress-text {
-    position: absolute;
+    position: static;
     text-align: center;
     font-weight: bold;
-    inset: calc(20vh + 3.25rem) 0 auto 0.2rem;
+    min-height: 1.25rem;
 }
 
     .loading-progress-text:after {

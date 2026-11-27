@@ -75,7 +75,7 @@ else if (_course is not null)
         if (!_hubStarted && Auth.IsAuthenticated && Auth.Session is not null && _course is not null)
         {
             _hubStarted = true;
-            await Realtime.StartAsync([Id], Auth.Session.AccessToken);
+            await Realtime.StartAsync([Id]);
         }
     }
 

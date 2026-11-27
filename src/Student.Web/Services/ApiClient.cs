@@ -1,7 +1,7 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.Components.WebAssembly.Http;
 
 namespace Student.Web.Services;
 
@@ -11,9 +11,18 @@ public sealed class ApiClient(HttpClient httpClient, ClientSessionStore auth)
 
     public async Task<LoginResponse> LoginAsync(string username, string password, CancellationToken cancellationToken = default)
     {
-        using var response = await httpClient.PostAsJsonAsync("api/auth/login",
-            new LoginRequest(username, password), JsonOptions, cancellationToken);
+        using var request = CreateRequest(HttpMethod.Post, "api/auth/login");
+        request.Content = JsonContent.Create(new LoginRequest(username, password), options: JsonOptions);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
         return await ReadAsync<LoginResponse>(response, cancellationToken);
+    }
+
+    public async Task LogoutAsync(CancellationToken cancellationToken = default)
+    {
+        using var request = CreateRequest(HttpMethod.Post, "api/auth/logout");
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+            await ThrowAsync(response, cancellationToken);
     }
 
     public Task<PagedResult<CourseDto>> GetCoursesAsync(
@@ -157,10 +166,7 @@ public sealed class ApiClient(HttpClient httpClient, ClientSessionStore auth)
     private HttpRequestMessage CreateRequest(HttpMethod method, string path)
     {
         var request = new HttpRequestMessage(method, path);
-        if (auth.IsAuthenticated && auth.Session is not null)
-        {
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", auth.Session.AccessToken);
-        }
+        request.SetBrowserRequestCredentials(BrowserRequestCredentials.SameOrigin);
         return request;
     }
 
@@ -221,7 +227,7 @@ public sealed record StudentScheduleDto(
 public sealed record SubjectDto(Guid Id, string Code, string Name, int Credits, bool IsActive, long Version);
 public sealed record AdminStatisticsDto(long TotalStudents, long TotalCourses, long ActiveRegistrations, long FullCourses);
 public sealed record SemesterDto(Guid Id, string Code, string Name, string StartDate, string EndDate, bool IsActive);
-public sealed record UserProfileDto(Guid UserId, string Username, string Role, Guid? StudentId, string DisplayName);
+public sealed record UserProfileDto(Guid UserId, string Username, string Role, Guid? StudentId, string DisplayName, DateTimeOffset ExpiresAt);
 public sealed record AdminStudentDto(Guid StudentId, string StudentCode, string FullName,
     string? Email, string? Major, string Username, bool IsActive);
 public sealed record CourseRegistrationDto(Guid RegistrationId, Guid StudentId, string? StudentCode,

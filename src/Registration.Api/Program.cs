@@ -29,7 +29,22 @@ builder.Services.AddHttpClient("audit", client => client.Timeout = TimeSpan.From
 builder.Services.AddSingleton<RabbitMqClient>();
 builder.Services.AddHostedService<OutboxPublisher>();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options => options.TokenValidationParameters = jwtTokenService.CreateValidationParameters());
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = jwtTokenService.CreateValidationParameters();
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                if (string.IsNullOrEmpty(context.Token)
+                    && context.Request.Cookies.TryGetValue("courseflow.auth", out var cookieToken))
+                {
+                    context.Token = cookieToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
+    });
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("Student", policy => policy.RequireAuthenticatedUser().RequireRole("Student"));

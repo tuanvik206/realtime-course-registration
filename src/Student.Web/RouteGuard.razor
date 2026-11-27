@@ -1,5 +1,6 @@
 @using System.Reflection
 @inject ClientSessionStore Session
+@inject ApiClient Api
 @inject NavigationManager Navigation
 
 @if (_forbidden)
@@ -31,9 +32,16 @@ else
 
     private bool _allowed;
     private bool _forbidden;
+    private bool _ready;
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
+        if (!_ready)
+        {
+            await Session.RestoreAsync(Api);
+            _ready = true;
+        }
+
         var requirement = RouteData.PageType.GetCustomAttribute<UiAuthorizeAttribute>(inherit: true);
         _forbidden = false;
         if (requirement is null)
